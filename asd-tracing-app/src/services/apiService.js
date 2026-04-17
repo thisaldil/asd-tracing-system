@@ -1,95 +1,229 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Change this to your computer's IP address when testing on a real phone
-// Use 'localhost' for iOS simulator, '10.0.2.2' for Android emulator
-const BASE_URL = 'http://192.168.1.100:5000/api';
+/**
+ * =========================================================
+ * ASD Tracing App API Service
+ * React Native + Expo
+ * Handles:
+ * - Live backend sync
+ * - Offline queue
+ * - Session start/end
+ * - Trial submission
+ * - Cognitive state fetch
+ * =========================================================
+ */
 
-const api = axios.create({ baseURL: BASE_URL, timeout: 10000 });
+/**
+ * IMPORTANT:
+ * Replace with your laptop IP address
+ * Example from ipconfig:
+ * 10.214.246.1
+ */
+const BASE_URL = 'http://192.168.8.104:5000/api';
 
-// ─── Offline queue ────────────────────────────────────────────────────────────
-// If no internet, trials are saved locally and synced when online
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
+/**
+ * Storage Keys
+ */
 const OFFLINE_QUEUE_KEY = 'offline_trial_queue';
 
+/* =========================================================
+   OFFLINE QUEUE HELPERS
+========================================================= */
+
+/**
+ * Save failed trial locally
+ */
 async function addToOfflineQueue(trial) {
-  const existing = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-  const queue = existing ? JSON.parse(existing) : [];
-  queue.push({ ...trial, offlineCreated: true, queuedAt: new Date().toISOString() });
-  await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-}
+  try {
+    const existing = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+    const queue = existing ? JSON.parse(existing) : [];
 
-export async function syncOfflineQueue() {
-  const existing = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-  if (!existing) return;
-  const queue = JSON.parse(existing);
-  if (queue.length === 0) return;
+    queue.push({
+      ...trial,
+      offlineCreated: true,
+      queuedAt: new Date().toISOString(),
+    });
 
-  const synced = [];
-  for (const trial of queue) {
-    try {
-      await api.post('/trials', trial);
-      synced.push(trial);
-    } catch (e) {
-      console.log('Could not sync trial, will retry next time');
-    }
+    await AsyncStorage.setItem(
+      OFFLINE_QUEUE_KEY,
+      JSON.stringify(queue)
+    );
+
+    console.log('Trial saved offline');
+  } catch (error) {
+    console.log('Offline queue save failed:', error.message);
   }
-
-  // Remove successfully synced items
-  const remaining = queue.filter(t => !synced.includes(t));
-  await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
 }
 
-// ─── API calls ────────────────────────────────────────────────────────────────
+/**
+ * Sync offline trials when internet returns
+ */
+export async function syncOfflineQueue() {
+  try {
+    const existing = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
 
+    if (!existing) return;
+
+    const queue = JSON.parse(existing);
+
+    if (queue.length === 0) return;
+
+    console.log('Syncing offline queue:', queue.length);
+
+    const remaining = [];
+
+    for (const trial of queue) {
+      try {
+        await api.post('/trials', trial);
+        console.log('Synced one offline trial');
+      } catch (error) {
+        remaining.push(trial);
+      }
+    }
+
+    await AsyncStorage.setItem(
+      OFFLINE_QUEUE_KEY,
+      JSON.stringify(remaining)
+    );
+
+    console.log('Remaining offline trials:', remaining.length);
+  } catch (error) {
+    console.log('Offline sync failed:', error.message);
+  }
+}
+
+/* =========================================================
+   SESSION API
+========================================================= */
+
+/**
+ * Start child session
+ */
 export async function startSession(childId, deviceInfo) {
   try {
-    const res = await api.post('/sessions/start', { childId, deviceInfo });
-    return res.data;
-  } catch (err) {
-    // Return a temporary offline session ID
-    return { _id: `offline_${Date.now()}`, childId, offline: true };
-  }
-}
+    console.log('Starting session...');
 
-export async function submitTrial(trialData) {
-  try {
-    const res = await api.post('/trials', trialData);
+    const res = await api.post('/sessions/start', {
+      childId,
+      deviceInfo,
+    });
+
+    console.log('Session started:', res.data);
+
     return res.data;
-  } catch (err) {
-    // Save to offline queue if no internet
-    await addToOfflineQueue(trialData);
-    // Return a local adaptive response so the game can continue offline
+  } catch (error) {
+    console.log('Session start failed:', error.message);
+
+    // fallback offline session
     return {
-      success: true,
+      _id: `offline_${Date.now()}`,
+      childId,
       offline: true,
-      accuracyScore: trialData.metrics.accuracyScore || 0.5,
-      rewardTriggered: (trialData.metrics.accuracyScore || 0.5) >= 0.60,
-      nextTrialParams: { shapeSize: 240, guidance: 'voice', timerEnabled: false },
-      currentDifficultyLevel: 2,
     };
   }
 }
 
+/**
+ * End session
+ */
+export async function endSession(sessionId, childId, summary) {
+  try {
+    console.log('Ending session...');
+
+    const res = await api.patch(
+      `/sessions/${sessionId}/end`,
+      {
+        childId,
+        ...summary,
+      }
+    );
+
+    console.log('Session ended:', res.data);
+
+    return res.data;
+  } catch (error) {
+    console.log('End session failed:', error.message);
+    return null;
+  }
+}
+
+/* =========================================================
+   TRIAL API
+========================================================= */
+
+/**
+ * Submit tracing trial
+ */
+export async function submitTrial(trialData) {
+  try {
+    console.log('Sending trial:', trialData);
+
+    const res = await api.post('/trials', trialData);
+
+    console.log('Trial success:', res.data);
+
+    return res.data;
+  } catch (error) {
+    console.log('Trial failed:', error.message);
+
+    // Save offline
+    await addToOfflineQueue(trialData);
+
+    // Continue game locally
+    return {
+      success: true,
+      offline: true,
+      accuracyScore: 0.5,
+      rewardTriggered: false,
+      nextTrialParams: {
+        shapeSize: 240,
+        guidance: 'voice',
+        timerEnabled: false,
+      },
+      currentDifficultyLevel: 1,
+      adaptationTriggered: 'none',
+    };
+  }
+}
+
+/* =========================================================
+   COGNITIVE STATE API
+========================================================= */
+
+/**
+ * Get live cognitive state
+ */
 export async function getCognitiveState(childId) {
   try {
     const res = await api.get(`/cognitive/${childId}`);
-    // Cache it locally for offline use
-    await AsyncStorage.setItem(`cog_state_${childId}`, JSON.stringify(res.data));
+
+    await AsyncStorage.setItem(
+      `cog_state_${childId}`,
+      JSON.stringify(res.data)
+    );
+
     return res.data;
-  } catch (err) {
-    // Return cached version if offline
-    const cached = await AsyncStorage.getItem(`cog_state_${childId}`);
+  } catch (error) {
+    console.log('Using cached cognitive state');
+
+    const cached = await AsyncStorage.getItem(
+      `cog_state_${childId}`
+    );
+
     return cached ? JSON.parse(cached) : null;
   }
 }
 
-export async function endSession(sessionId, childId, summary) {
-  try {
-    const res = await api.patch(`/sessions/${sessionId}/end`, { childId, ...summary });
-    return res.data;
-  } catch (err) {
-    console.log('Session end queued for sync');
-    return null;
-  }
+export async function getDashboard(childId) {
+  const res = await api.get(`/dashboard/${childId}`);
+  return res.data;
 }

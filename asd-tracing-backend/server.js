@@ -22,6 +22,7 @@ app.use('/api/children',  require('./src/routes/childRoutes'));
 app.use('/api/trials',    require('./src/routes/trialRoutes'));
 app.use('/api/sessions',  require('./src/routes/sessionRoutes'));
 app.use('/api/cognitive', require('./src/routes/cognitiveRoutes'));
+app.use('/api/dashboard', require('./src/routes/dashboardRoutes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -35,6 +36,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

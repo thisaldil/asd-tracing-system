@@ -42,7 +42,7 @@ async function initSession() {
     // TEMPORARY: hardcoded test child for development
     // Replace this with real child profile from context later
     const testChild = {
-      _id: 'test_child_001',
+      _id: '69e0e39c84040d2901db4b04',
       alias: 'Test Child',
       asdSeverityLevel: 2,
       verbalAbility: 'limited',
@@ -93,7 +93,7 @@ async function initSession() {
     await new Promise(r => setTimeout(r, 0)); 
 
     const trialData = {
-      childId:        (activeChild || { _id: 'test_child_001' })._id,
+      childId:        (activeChild || { _id: '69e0e39c84040d2901db4b04' })._id,
       sessionId,
       trialNumber:    currentTrial,
       shapeId:        currentShape.id,
@@ -146,7 +146,7 @@ async function handleEndSession() {
       ? scores.reduce((a, b) => a + b, 0) / scores.length
       : 0;
 
-    await endSession(sessionId, (activeChild || { _id: 'test_child_001' })._id, {
+    await endSession(sessionId, (activeChild || { _id: '69e0e39c84040d2901db4b04' })._id, {
       totalTrials:      scores.length,
       completedTrials:  scores.filter(s => s > 0).length,
       avgAccuracyScore: parseFloat(avgAccuracy.toFixed(3)),
