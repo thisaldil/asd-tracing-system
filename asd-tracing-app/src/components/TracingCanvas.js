@@ -73,6 +73,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
   const trialStartTimeRef = useRef(null);
   const liftCountRef = useRef(0);
   const sampleCounterRef = useRef(0); // for sampling every 5th point
+  const isTracingRef = useRef(false);
 
   const scaledIdealPath = shape.idealPath.map(([x, y]) => ({
     x: x * shapeSize,
@@ -88,6 +89,13 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     y: shape.endPoint[1] * shapeSize
   };
 
+  const startAndEndOverlap = Math.hypot(startPoint.x - endPoint.x, startPoint.y - endPoint.y) < 1;
+
+  const setTracing = (value) => {
+    isTracingRef.current = value;
+    setIsTracing(value);
+  };
+
   const buildPathString = (points) => {
     if (points.length < 2) return '';
     return points.reduce((path, point, i) =>
@@ -98,6 +106,8 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder:  () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
 
     onPanResponderGrant: (evt) => {
       const { locationX, locationY } = evt.nativeEvent;
@@ -110,7 +120,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
       );
 
       if (distToStart < 40) {
-        setIsTracing(true);
+        setTracing(true);
         setTrialStarted(true);
         trialStartTimeRef.current = now;
         liftCountRef.current = 0;
@@ -121,7 +131,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     },
 
     onPanResponderMove: (evt) => {
-      if (!isTracing) return;
+      if (!isTracingRef.current || !trialStartTimeRef.current) return;
       const { locationX, locationY } = evt.nativeEvent;
       const t = Date.now() - trialStartTimeRef.current;
 
@@ -134,7 +144,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     },
 
     onPanResponderRelease: (evt) => {
-      if (!isTracing) return;
+      if (!isTracingRef.current) return;
       const { locationX, locationY } = evt.nativeEvent;
       liftCountRef.current++;
 
@@ -147,14 +157,17 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
       if (distToEnd < 50) {
         // Trial complete — compute all metrics
         finaliseTrial(locationX, locationY, true);
+        return;
       }
       // If not near end, count as a lift (finger left the screen mid-trace)
-      setIsTracing(false);
+      setTracing(false);
     },
   })).current;
 
   const finaliseTrial = useCallback((endX, endY, completed) => {
     const touchPoints = touchPointsRef.current;
+    if (!trialStartTimeRef.current || touchPoints.length === 0) return;
+
     const totalTime   = Date.now() - trialStartTimeRef.current;
 
     // Compute all research metrics
@@ -181,13 +194,13 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
 
     const metrics = {
       pathDeviation:    parseFloat(pathDeviation.toFixed(2)),
-      maxDeviation:     parseFloat(Math.max(...touchPoints.map(p => {
+      maxDeviation:     parseFloat((touchPoints.length > 0 ? Math.max(...touchPoints.map(p => {
         const closest = shape.idealPath.reduce((min, ip) => {
           const d = Math.sqrt(Math.pow(p.x - ip[0]*shapeSize, 2) + Math.pow(p.y - ip[1]*shapeSize, 2));
           return d < min ? d : min;
         }, Infinity);
         return closest;
-      })).toFixed(2)),
+      })) : 0).toFixed(2)),
       completionTimeMs: totalTime,
       hesitationCount,
       liftCount:        liftCountRef.current - 1, // subtract final lift
@@ -196,9 +209,10 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
       velocityVariance: parseFloat(velocityVariance.toFixed(4)),
     };
 
-    setIsTracing(false);
+    setTracing(false);
     setUserPath([]);
     touchPointsRef.current = [];
+    trialStartTimeRef.current = null;
 
     onTrialComplete({ metrics, touchPathSample, completed });
   }, [shape, shapeSize, onTrialComplete]);
@@ -210,7 +224,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
   return (
     <View style={[styles.container, { width: shapeSize, height: shapeSize }]}
           {...panResponder.panHandlers}>
-      <Svg width={shapeSize} height={shapeSize}>
+      <Svg width={shapeSize} height={shapeSize} pointerEvents="none">
 
         {/* Ideal dotted path guide */}
         <Path
@@ -246,16 +260,20 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
           />
         )}
 
+        {/* Red end dot */}
+        <Circle
+          cx={endPoint.x} cy={endPoint.y}
+          r={startAndEndOverlap ? 24 : 20}
+          fill={startAndEndOverlap ? 'none' : '#F44336'}
+          stroke={startAndEndOverlap ? '#F44336' : 'none'}
+          strokeWidth={startAndEndOverlap ? 4 : 0}
+          opacity={0.9}
+        />
+
         {/* Green start dot */}
         <Circle
           cx={startPoint.x} cy={startPoint.y}
           r={20} fill="#4CAF50" opacity={0.9}
-        />
-
-        {/* Red end dot */}
-        <Circle
-          cx={endPoint.x} cy={endPoint.y}
-          r={20} fill="#F44336" opacity={0.9}
         />
 
       </Svg>

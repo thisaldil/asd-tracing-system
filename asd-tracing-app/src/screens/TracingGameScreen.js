@@ -84,9 +84,13 @@ async function initSession() {
   /**
    * Called by TracingCanvas when a tracing attempt ends
    */
-  async function handleTrialComplete({ metrics, touchPathSample, completed }) {
-    const currentTrial = trialNumber + 1;
-    setTrialNumber(currentTrial);
+ async function handleTrialComplete({ metrics, touchPathSample, completed }) {
+    let currentTrial;
+    setTrialNumber(prev => {
+      currentTrial = prev + 1;
+      return currentTrial;
+    });
+    await new Promise(r => setTimeout(r, 0)); 
 
     const trialData = {
       childId:        (activeChild || { _id: 'test_child_001' })._id,
@@ -136,19 +140,29 @@ async function initSession() {
   }
 
   // End session and go back
-  async function handleEndSession() {
+async function handleEndSession() {
     const scores = sessionTrialsRef.current;
     const avgAccuracy = scores.length > 0
       ? scores.reduce((a, b) => a + b, 0) / scores.length
       : 0;
 
-await endSession(sessionId, (activeChild || { _id: 'test_child_001' })._id, {
+    await endSession(sessionId, (activeChild || { _id: 'test_child_001' })._id, {
       totalTrials:      scores.length,
       completedTrials:  scores.filter(s => s > 0).length,
       avgAccuracyScore: parseFloat(avgAccuracy.toFixed(3)),
       difficultyProgression: scores.map((_, i) => difficultyLevel),
     });
-    navigation.goBack();
+
+    // Safe navigation — only go back if there is a screen to go back to
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // For now, just reset the session so the game restarts
+      setTrialNumber(0);
+      setAccuracy(null);
+      sessionTrialsRef.current = [];
+      initSession();
+    }
   }
 
   if (sessionLoading || !currentShape) {
