@@ -1,34 +1,74 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '../utils/storage';
+import { logoutParent } from '../services/apiService';
 
 const ChildContext = createContext();
 
 export function ChildProvider({ children }) {
   const [activeChild, setActiveChild] = useState(null);
   const [cognitiveState, setCognitiveState] = useState(null);
+  const [parentProfile, setParentProfile] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+  const [childrenList, setChildrenList] = useState([]);
 
-  // FIX 6: Rehydrate persisted child on app launch
+  // Rehydrate persisted child and auth on app launch
   useEffect(() => {
-    AsyncStorage.getItem('active_child').then(value => {
-      if (value) {
-        setActiveChild(JSON.parse(value));
-      }
-    }).catch(err => console.warn('Failed to restore active child:', err));
+    Promise.all([
+      storage.get('active_child').then(value => {
+        if (value) {
+          setActiveChild(value);
+        }
+      }),
+      storage.get('auth_token').then(value => {
+        if (value) {
+          setAuthToken(value);
+        }
+      }),
+      storage.get('parent_profile').then(value => {
+        if (value) {
+          setParentProfile(value);
+        }
+      })
+    ]).catch(err => console.warn('Failed to restore app state:', err));
   }, []);
 
   const selectChild = async (child) => {
     setActiveChild(child);
-    await AsyncStorage.setItem('active_child', JSON.stringify(child));
+    await storage.set('active_child', child);
+  };
+
+  const setParent = async (parent, token) => {
+    setParentProfile(parent);
+    setAuthToken(token);
+    await storage.set('parent_profile', parent);
+    await storage.set('auth_token', token);
+  };
+
+  const logout = async () => {
+    setActiveChild(null);
+    setParentProfile(null);
+    setAuthToken(null);
+    setChildrenList([]);
+    setCognitiveState(null);
+    await logoutParent();
   };
 
   const updateCognitiveState = (state) => {
     setCognitiveState(state);
   };
 
+  const setChildren = (children) => {
+    setChildrenList(children);
+  };
+
   return (
     <ChildContext.Provider value={{
       activeChild, selectChild,
-      cognitiveState, updateCognitiveState
+      parentProfile, setParent,
+      authToken,
+      childrenList, setChildren,
+      cognitiveState, updateCognitiveState,
+      logout
     }}>
       {children}
     </ChildContext.Provider>

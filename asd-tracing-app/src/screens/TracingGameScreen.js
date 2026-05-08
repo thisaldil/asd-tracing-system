@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Alert, Vibration,
-  Dimensions, ActivityIndicator
+  Dimensions, ActivityIndicator, Platform
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import TracingCanvas from '../components/TracingCanvas';
 import { SRI_LANKAN_SHAPES, getShapesForDifficulty } from '../data/shapes/sriLankanShapes';
 import { submitTrial, startSession, endSession, syncOfflineQueue } from '../services/apiService';
@@ -43,6 +42,12 @@ async function initSession() {
     if (!activeChild) {
       console.warn('No active child selected');
       setSessionLoading(false);
+      Alert.alert('Error', 'Please select a child first', [
+        {
+          text: 'Go Back',
+          onPress: () => navigation.goBack()
+        }
+      ]);
       return;
     }
     const child = activeChild;
@@ -270,8 +275,10 @@ const styles = StyleSheet.create({
   },
   canvasContainer: {
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3
+    ...Platform.select({
+      web: { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }
+    })
   },
   rewardOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,

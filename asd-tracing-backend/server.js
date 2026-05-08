@@ -18,6 +18,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // 10mb to allow touch path arrays
 
 // Routes (we will create these files next)
+app.use('/api/auth',      require('./src/routes/authRoutes'));
 app.use('/api/children',  require('./src/routes/childRoutes'));
 app.use('/api/trials',    require('./src/routes/trialRoutes'));
 app.use('/api/sessions',  require('./src/routes/sessionRoutes'));

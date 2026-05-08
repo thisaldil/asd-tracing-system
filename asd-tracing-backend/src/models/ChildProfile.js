@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const childProfileSchema = new mongoose.Schema({
   parentId: {
-    type: String, // Firebase Auth UID
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Parent',
     required: true,
     index: true
   },
