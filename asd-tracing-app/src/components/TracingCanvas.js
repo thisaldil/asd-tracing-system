@@ -8,19 +8,20 @@ const CANVAS_SIZE = SCREEN_WIDTH * 0.9;
 /**
  * Computes the average deviation of the user's path from the ideal path
  * This is the core motor measurement
+ * FIX 5: Accept already-scaled pixel points to avoid double-scaling
  */
-function computePathDeviation(userPoints, idealPoints, shapeSize) {
+function computePathDeviation(userPoints, scaledIdealPoints) {
   if (userPoints.length < 3) return 100; // too short = high deviation
 
   let totalDeviation = 0;
   let count = 0;
 
   userPoints.forEach(userPoint => {
-    // Find closest ideal path point to this user point
+    // Find closest ideal path point to this user point (both already in pixels)
     let minDist = Infinity;
-    idealPoints.forEach(ideal => {
-      const dx = userPoint.x - (ideal[0] * shapeSize);
-      const dy = userPoint.y - (ideal[1] * shapeSize);
+    scaledIdealPoints.forEach(ideal => {
+      const dx = userPoint.x - ideal.x;
+      const dy = userPoint.y - ideal.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < minDist) minDist = dist;
     });
@@ -171,7 +172,7 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     const totalTime   = Date.now() - trialStartTimeRef.current;
 
     // Compute all research metrics
-    const pathDeviation    = computePathDeviation(touchPoints, shape.idealPath, shapeSize);
+    const pathDeviation = computePathDeviation(touchPoints, scaledIdealPath); // FIX 5: pass already-scaled pixels
     const hesitationCount  = countHesitations(touchPoints);
     const velocityVariance = computeVelocityVariance(touchPoints);
 

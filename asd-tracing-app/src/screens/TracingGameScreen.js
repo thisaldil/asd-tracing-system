@@ -20,7 +20,7 @@ export default function TracingGameScreen({ navigation }) {
   const [shapeSize,       setShapeSize]       = useState(240);
   const [guidanceLevel,   setGuidanceLevel]   = useState('voice');
   const [difficultyLevel, setDifficultyLevel] = useState(1);
-  const [trialNumber,     setTrialNumber]     = useState(0);
+  const trialNumberRef = useRef(0); // FIX 3: use ref to avoid race conditions
   const [showReward,      setShowReward]      = useState(false);
   const [showGuidance,    setShowGuidance]    = useState(false);
   const [sessionLoading,  setSessionLoading]  = useState(true);
@@ -39,18 +39,13 @@ export default function TracingGameScreen({ navigation }) {
   }, [difficultyLevel]);
 
 async function initSession() {
-    // TEMPORARY: hardcoded test child for development
-    // Replace this with real child profile from context later
-    const testChild = {
-      _id: '69e0e39c84040d2901db4b04',
-      alias: 'Test Child',
-      asdSeverityLevel: 2,
-      verbalAbility: 'limited',
-      sensoryProfile: { preferredRewardType: 'visual' }
-    };
-
-    // If no active child, use test child
-    const child = activeChild || testChild;
+    // FIX 4: Guard against missing activeChild instead of using hardcoded fallback
+    if (!activeChild) {
+      console.warn('No active child selected');
+      setSessionLoading(false);
+      return;
+    }
+    const child = activeChild;
 
     setSessionLoading(true);
     const session = await startSession(child._id, {
@@ -69,12 +64,13 @@ async function initSession() {
 
   function pickNextShape(difficulty) {
     const shapes = getShapesForDifficulty(difficulty);
+    if (!shapes || shapes.length === 0) return; // FIX 2: guard against empty arrays
     const randomIndex = Math.floor(Math.random() * shapes.length);
     setCurrentShape(shapes[randomIndex]);
   }
 
   function getSizeForDifficulty(level) {
-    return { 1: 300, 2: 240, 3: 180, 4: 130, 5: 110 }[level] || 240;
+    return 300; // Keep constant size across all difficulty levels
   }
 
   function getGuidanceForDifficulty(level) {
@@ -85,15 +81,18 @@ async function initSession() {
    * Called by TracingCanvas when a tracing attempt ends
    */
  async function handleTrialComplete({ metrics, touchPathSample, completed }) {
-    let currentTrial;
-    setTrialNumber(prev => {
-      currentTrial = prev + 1;
-      return currentTrial;
-    });
-    await new Promise(r => setTimeout(r, 0)); 
+    // FIX 3: Use useRef instead of state to avoid race conditions
+    trialNumberRef.current += 1;
+    const currentTrial = trialNumberRef.current;
+    
+    // FIX 4: Guard against missing activeChild
+    if (!activeChild) {
+      console.warn('No active child selected during trial');
+      return;
+    }
 
     const trialData = {
-      childId:        (activeChild || { _id: '69e0e39c84040d2901db4b04' })._id,
+      childId:        activeChild._id,
       sessionId,
       trialNumber:    currentTrial,
       shapeId:        currentShape.id,
@@ -108,11 +107,14 @@ async function initSession() {
     const result = await submitTrial(trialData);
     sessionTrialsRef.current.push(result.accuracyScore);
 
+    // FIX 2: Clamp difficulty to max level 4
+    const nextLevel = Math.min(result.currentDifficultyLevel || difficultyLevel, 4);
+    
     // Update local cognitive state display
-    if (result.currentDifficultyLevel && result.currentDifficultyLevel !== difficultyLevel) {
-      setDifficultyLevel(result.currentDifficultyLevel);
-      setShapeSize(getSizeForDifficulty(result.currentDifficultyLevel));
-      setGuidanceLevel(getGuidanceForDifficulty(result.currentDifficultyLevel));
+    if (nextLevel && nextLevel !== difficultyLevel) {
+      setDifficultyLevel(nextLevel);
+      setShapeSize(getSizeForDifficulty(nextLevel));
+      setGuidanceLevel(getGuidanceForDifficulty(nextLevel));
     }
 
     setAccuracy(Math.round(result.accuracyScore * 100));
@@ -123,7 +125,7 @@ async function initSession() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => {
         setShowReward(false);
-        pickNextShape(result.currentDifficultyLevel || difficultyLevel);
+        pickNextShape(nextLevel);
       }, 2000);
     } else {
       // Soft guidance — no punishment, just a gentle visual cue
@@ -141,12 +143,18 @@ async function initSession() {
 
   // End session and go back
 async function handleEndSession() {
+    // FIX 4: Guard against missing activeChild
+    if (!activeChild) {
+      console.warn('No active child selected during session end');
+      return;
+    }
+    
     const scores = sessionTrialsRef.current;
     const avgAccuracy = scores.length > 0
       ? scores.reduce((a, b) => a + b, 0) / scores.length
       : 0;
 
-    await endSession(sessionId, (activeChild || { _id: '69e0e39c84040d2901db4b04' })._id, {
+    await endSession(sessionId, activeChild._id, {
       totalTrials:      scores.length,
       completedTrials:  scores.filter(s => s > 0).length,
       avgAccuracyScore: parseFloat(avgAccuracy.toFixed(3)),
@@ -158,7 +166,7 @@ async function handleEndSession() {
       navigation.goBack();
     } else {
       // For now, just reset the session so the game restarts
-      setTrialNumber(0);
+      trialNumberRef.current = 0; // FIX 3: reset useRef instead of useState
       setAccuracy(null);
       sessionTrialsRef.current = [];
       initSession();
@@ -223,7 +231,7 @@ async function handleEndSession() {
       {/* Difficulty indicator for therapist/parent to see */}
       <View style={styles.footer}>
         <Text style={styles.difficultyText}>Level {difficultyLevel}</Text>
-        <Text style={styles.trialCountText}>Trial {trialNumber}</Text>
+        <Text style={styles.trialCountText}>Trial {trialNumberRef.current}</Text>
         <Text style={styles.endButton} onPress={handleEndSession}>End Session</Text>
       </View>
 

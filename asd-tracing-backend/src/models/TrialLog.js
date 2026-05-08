@@ -14,7 +14,19 @@ const trialLogSchema = new mongoose.Schema({
 
   // What shape was shown
   shapeId:       { type: String, required: true }, // e.g. "elephant_cloud_01"
-  shapeCategory: { type: String, enum: ['animal', 'fruit', 'plant', 'geometric'] },
+shapeCategory: {
+  type: String,
+  enum: [
+    'basic',
+    'animal',
+    'fruit',
+    'plant',
+    'geometric',
+    'vehicle',
+    'body',
+    'clothing'
+  ]
+},
 
   difficultyLevel: { type: Number, min: 1, max: 5 }, // difficulty AT START of trial
 

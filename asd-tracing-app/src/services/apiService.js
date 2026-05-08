@@ -178,7 +178,7 @@ export async function submitTrial(trialData) {
     // Save offline
     await addToOfflineQueue(trialData);
 
-    // Continue game locally
+    // Continue game locally — FIX 7: echo back current difficulty from trial data
     return {
       success: true,
       offline: true,
@@ -189,7 +189,7 @@ export async function submitTrial(trialData) {
         guidance: 'voice',
         timerEnabled: false,
       },
-      currentDifficultyLevel: 1,
+      currentDifficultyLevel: trialData.difficultyLevel,
       adaptationTriggered: 'none',
     };
   }

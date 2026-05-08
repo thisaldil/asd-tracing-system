@@ -14,6 +14,8 @@ const submitTrial = async (req, res) => {
       shapeId, shapeCategory, difficultyLevel,
       metrics, touchPathSample, completed
     } = req.body;
+    console.log("Incoming Trial Data:");
+console.log(req.body);
 
     // 1. Compute trial scores from raw metrics
     const trialScores = computeTrialScores(metrics);
@@ -38,7 +40,15 @@ const submitTrial = async (req, res) => {
         baselineMotor:     trialScores.motorRaw,
         baselineAttention: trialScores.attentionRaw,
         baselineVMI:       trialScores.vmiRaw,
-        baselineLockedAt:  new Date()
+        baselineLockedAt:  new Date(),
+        motorScore:        trialScores.motorRaw,
+        attentionScore:    trialScores.attentionRaw,
+        vmiScore:          trialScores.vmiRaw,
+        compositeScore:    trialScores.accuracyScore,
+        difficultyLevel:   1,
+        consecutiveCorrect: 0,
+        consecutiveErrors:  0,
+        totalTrialsCompleted: 0
       });
     }
 
@@ -71,8 +81,14 @@ const submitTrial = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  console.error("TRIAL SUBMIT ERROR:");
+  console.error(error);
+
+  res.status(500).json({
+    success: false,
+    error: error.message,
+  });
+}
 };
 
 /**
