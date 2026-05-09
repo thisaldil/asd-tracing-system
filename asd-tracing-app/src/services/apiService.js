@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 
 /**
@@ -17,11 +18,15 @@ import { storage } from '../utils/storage';
 
 /**
  * IMPORTANT:
- * Replace with your laptop IP address
- * Example from ipconfig:
- * 10.214.246.1
+ * DEV_MACHINE_IP = your laptop's WiFi IP from ipconfig
+ * Run: ipconfig → look for "Wireless LAN adapter WiFi" → IPv4 Address
  */
-const BASE_URL = 'http://192.168.8.104:5000/api';
+const DEV_MACHINE_IP = '172.28.21.178';
+
+const BASE_URL =
+  Platform.OS === 'web'
+    ? 'http://localhost:5000/api'
+    : `http://${DEV_MACHINE_IP}:5000/api`;
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -58,10 +63,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Clear token and force re-login
       await storage.remove(AUTH_TOKEN_KEY);
       await storage.remove('active_child');
-      // Note: Navigation to LoginScreen should be handled by the app's auth state
     }
     return Promise.reject(error);
   }
@@ -71,9 +74,6 @@ api.interceptors.response.use(
    AUTHENTICATION API
 ========================================================= */
 
-/**
- * Register a new parent account
- */
 export async function registerParent(fullName, email, password, confirmPassword) {
   try {
     console.log('Registering parent...');
@@ -81,16 +81,12 @@ export async function registerParent(fullName, email, password, confirmPassword)
       fullName,
       email,
       password,
-      confirmPassword
+      confirmPassword,
     });
-
     console.log('Registration successful:', res.data);
-
-    // Save token
     if (res.data.token) {
       await storage.set(AUTH_TOKEN_KEY, res.data.token);
     }
-
     return res.data;
   } catch (error) {
     console.log('Registration failed:', error.message);
@@ -98,24 +94,14 @@ export async function registerParent(fullName, email, password, confirmPassword)
   }
 }
 
-/**
- * Login parent account
- */
 export async function loginParent(email, password) {
   try {
     console.log('Logging in parent...');
-    const res = await api.post('/auth/login', {
-      email,
-      password
-    });
-
+    const res = await api.post('/auth/login', { email, password });
     console.log('Login successful:', res.data);
-
-    // Save token
     if (res.data.token) {
       await storage.set(AUTH_TOKEN_KEY, res.data.token);
     }
-
     return res.data;
   } catch (error) {
     console.log('Login failed:', error.message);
@@ -123,14 +109,10 @@ export async function loginParent(email, password) {
   }
 }
 
-/**
- * Verify JWT token
- */
 export async function verifyToken() {
   try {
     const token = await storage.get(AUTH_TOKEN_KEY);
     if (!token) return null;
-
     const res = await api.post('/auth/verify');
     return res.data;
   } catch (error) {
@@ -139,9 +121,6 @@ export async function verifyToken() {
   }
 }
 
-/**
- * Logout parent
- */
 export async function logoutParent() {
   try {
     await storage.remove(AUTH_TOKEN_KEY);
@@ -156,49 +135,31 @@ export async function logoutParent() {
    OFFLINE QUEUE HELPERS
 ========================================================= */
 
-/**
- * Save failed trial locally
- */
 async function addToOfflineQueue(trial) {
   try {
     const existing = await storage.get(OFFLINE_QUEUE_KEY);
     const queue = existing ? existing : [];
-
     queue.push({
       ...trial,
       offlineCreated: true,
       queuedAt: new Date().toISOString(),
     });
-
-    await storage.set(
-      OFFLINE_QUEUE_KEY,
-      queue
-    );
-
+    await storage.set(OFFLINE_QUEUE_KEY, queue);
     console.log('Trial saved offline');
   } catch (error) {
     console.log('Offline queue save failed:', error.message);
   }
 }
 
-/**
- * Sync offline trials when internet returns
- */
 export async function syncOfflineQueue() {
   try {
     const existing = await storage.get(OFFLINE_QUEUE_KEY);
+    if (!existing || existing.length === 0) return;
 
-    if (!existing) return;
-
-    const queue = existing;
-
-    if (queue.length === 0) return;
-
-    console.log('Syncing offline queue:', queue.length);
-
+    console.log('Syncing offline queue:', existing.length);
     const remaining = [];
 
-    for (const trial of queue) {
+    for (const trial of existing) {
       try {
         await api.post('/trials', trial);
         console.log('Synced one offline trial');
@@ -207,11 +168,7 @@ export async function syncOfflineQueue() {
       }
     }
 
-    await storage.set(
-      OFFLINE_QUEUE_KEY,
-      remaining
-    );
-
+    await storage.set(OFFLINE_QUEUE_KEY, remaining);
     console.log('Remaining offline trials:', remaining.length);
   } catch (error) {
     console.log('Offline sync failed:', error.message);
@@ -222,25 +179,14 @@ export async function syncOfflineQueue() {
    SESSION API
 ========================================================= */
 
-/**
- * Start child session
- */
 export async function startSession(childId, deviceInfo) {
   try {
     console.log('Starting session...');
-
-    const res = await api.post('/sessions/start', {
-      childId,
-      deviceInfo,
-    });
-
+    const res = await api.post('/sessions/start', { childId, deviceInfo });
     console.log('Session started:', res.data);
-
     return res.data;
   } catch (error) {
     console.log('Session start failed:', error.message);
-
-    // fallback offline session
     return {
       _id: `offline_${Date.now()}`,
       childId,
@@ -249,23 +195,14 @@ export async function startSession(childId, deviceInfo) {
   }
 }
 
-/**
- * End session
- */
 export async function endSession(sessionId, childId, summary) {
   try {
     console.log('Ending session...');
-
-    const res = await api.patch(
-      `/sessions/${sessionId}/end`,
-      {
-        childId,
-        ...summary,
-      }
-    );
-
+    const res = await api.patch(`/sessions/${sessionId}/end`, {
+      childId,
+      ...summary,
+    });
     console.log('Session ended:', res.data);
-
     return res.data;
   } catch (error) {
     console.log('End session failed:', error.message);
@@ -277,25 +214,15 @@ export async function endSession(sessionId, childId, summary) {
    TRIAL API
 ========================================================= */
 
-/**
- * Submit tracing trial
- */
 export async function submitTrial(trialData) {
   try {
     console.log('Sending trial:', trialData);
-
     const res = await api.post('/trials', trialData);
-
     console.log('Trial success:', res.data);
-
     return res.data;
   } catch (error) {
     console.log('Trial failed:', error.message);
-
-    // Save offline
     await addToOfflineQueue(trialData);
-
-    // Continue game locally — FIX 7: echo back current difficulty from trial data
     return {
       success: true,
       offline: true,
@@ -316,26 +243,14 @@ export async function submitTrial(trialData) {
    COGNITIVE STATE API
 ========================================================= */
 
-/**
- * Get live cognitive state
- */
 export async function getCognitiveState(childId) {
   try {
     const res = await api.get(`/cognitive/${childId}`);
-
-    await storage.set(
-      `cog_state_${childId}`,
-      res.data
-    );
-
+    await storage.set(`cog_state_${childId}`, res.data);
     return res.data;
   } catch (error) {
     console.log('Using cached cognitive state');
-
-    const cached = await storage.get(
-      `cog_state_${childId}`
-    );
-
+    const cached = await storage.get(`cog_state_${childId}`);
     return cached ? cached : null;
   }
 }
@@ -349,9 +264,6 @@ export async function getDashboard(childId) {
    CHILD API
 ========================================================= */
 
-/**
- * Create a new child profile
- */
 export async function createChild(childData) {
   try {
     console.log('Creating child profile...');
@@ -364,9 +276,6 @@ export async function createChild(childData) {
   }
 }
 
-/**
- * Get all children for the logged-in parent
- */
 export async function getParentChildren(parentId) {
   try {
     console.log('Fetching children for parent...');
