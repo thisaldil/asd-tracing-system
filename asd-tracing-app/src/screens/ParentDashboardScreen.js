@@ -202,14 +202,27 @@ function LoadingSkeleton() {
 // ─── Main screen ──────────────────────────────────────────
 export default function ParentDashboardScreen({ navigation }) {
   const { activeChild } = useChild();
+  const { logout } = useChild();
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const childId = activeChild?._id || '69e0e39c84040d2901db4b04';
   const childName = activeChild?.alias || 'Kavindu';
   const parentInitial = 'A';
 
   useEffect(() => { loadDashboard(); }, []);
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await logout();
+    } catch (e) {
+      console.log('Logout failed', e);
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   const loadDashboard = async () => {
     try {
@@ -276,6 +289,13 @@ export default function ParentDashboardScreen({ navigation }) {
               <View style={s.heroTopRight}>
                 <TouchableOpacity style={s.heroIconBtn}>
                   <Ionicons name="notifications-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={s.heroIconBtn} onPress={handleLogout}>
+                  {loggingOut ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="log-out-outline" size={18} color="#fff" />
+                  )}
                 </TouchableOpacity>
                 <View style={s.heroAvatar}>
                   <Text style={s.heroAvatarTxt}>{parentInitial}</Text>
