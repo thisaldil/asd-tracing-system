@@ -539,14 +539,35 @@ export const SHAPES = {
     startPoint: [0.30, 0.88],
     endPoint:   [0.30, 0.88],
     dotPositions: [
-      [0.24, 0.34], // thumb tip
-      [0.39, 0.20], // index tip
-      [0.50, 0.16], // middle tip (apex)
-      [0.61, 0.20], // ring tip
-      [0.72, 0.24], // pinky tip
-      [0.73, 0.65], // palm right
-      [0.42, 0.88], // wrist base
-    ],
+  // ── THUMB (dots 0–2) ──
+  [0.20, 0.56], // 0 — thumb left wall (up-stroke mid)
+  [0.24, 0.34], // 1 — THUMB TIP
+  [0.32, 0.48], // 2 — thumb right wall (down-stroke mid)
+
+  // ── INDEX FINGER (dots 3–5) ──
+  [0.35, 0.32], // 3 — index upper left (up-stroke mid)
+  [0.39, 0.20], // 4 — INDEX TIP
+  [0.43, 0.30], // 5 — index upper right (down-stroke mid)
+
+  // ── MIDDLE FINGER (dots 6–8) ──
+  [0.46, 0.26], // 6 — middle upper left (up-stroke mid)
+  [0.50, 0.16], // 7 — MIDDLE TIP
+  [0.54, 0.26], // 8 — middle upper right (down-stroke mid)
+
+  // ── RING FINGER (dots 9–11) ──
+  [0.56, 0.26], // 9  — ring upper left (up-stroke mid)
+  [0.61, 0.20], // 10 — RING TIP
+  [0.64, 0.28], // 11 — ring upper right (down-stroke mid)
+
+  // ── PINKY FINGER (dots 12–14) ──
+  [0.68, 0.30], // 12 — pinky upper left (up-stroke mid)
+  [0.72, 0.24], // 13 — PINKY TIP
+  [0.75, 0.32], // 14 — pinky upper right (down-stroke mid)
+
+  // ── PALM + WRIST (dots 15–16) ──
+  [0.73, 0.65], // 15 — palm lower right
+  [0.42, 0.88], // 16 — wrist base mid
+],
     tolerancePx: 18,
     strokeColor: '#D4537E',
   },

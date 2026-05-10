@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, PanResponder, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { View, PanResponder, StyleSheet, Dimensions, Animated } from 'react-native';
+import Svg, { Path, Circle, G } from 'react-native-svg';
+// ← AnimatedCircle import removed from here
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -10,12 +11,75 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Computes average deviation of user path from ideal path.
- * FIX 5 (already applied): accepts pre-scaled pixel points — no double scaling.
+ * Checks a single touch point against all waypoint dots.
+ * Returns the index of the dot hit, or -1 if none.
+ * Called on every move event — must be fast.
  *
- * Issue 2 FIX: guard against empty scaledIdealPoints to avoid Infinity leaking
- * into metrics when a shape has no ideal path points.
+ * @param {number} x, y       — current touch position in canvas pixels
+ * @param {Array}  dotPositions — normalised [nx, ny] from shape
+ * @param {number} shapeSize  — canvas size in pixels
+ * @param {number} threshold  — hit radius in pixels (default 40)
  */
+function checkDotHit(x, y, dotPositions, shapeSize, threshold = 40) {
+  for (let i = 0; i < dotPositions.length; i++) {
+    const px = dotPositions[i][0] * shapeSize;
+    const py = dotPositions[i][1] * shapeSize;
+    if (Math.hypot(x - px, y - py) < threshold) return i;
+  }
+  return -1;
+}
+
+function getClockwiseDotOrder(dotPositions, startPoint) {
+  if (!Array.isArray(dotPositions) || dotPositions.length === 0) return [];
+  if (dotPositions.length === 1) return [0];
+
+  const centroid = dotPositions.reduce(
+    (acc, [x, y]) => ({ x: acc.x + x, y: acc.y + y }),
+    { x: 0, y: 0 }
+  );
+  const cx = centroid.x / dotPositions.length;
+  const cy = centroid.y / dotPositions.length;
+
+  // Screen space has Y increasing downward, so ascending atan2 angles
+  // produces clockwise ordering around the centroid.
+  const ordered = dotPositions
+    .map(([x, y], index) => ({ index, angle: Math.atan2(y - cy, x - cx) }))
+    .sort((a, b) => a.angle - b.angle)
+    .map(item => item.index);
+
+  if (!Array.isArray(startPoint) || startPoint.length < 2) {
+    return ordered;
+  }
+
+  let rotationStart = 0;
+  let minDist = Infinity;
+  ordered.forEach((dotIndex, orderIndex) => {
+    const [dx, dy] = dotPositions[dotIndex];
+    const dist = Math.hypot(dx - startPoint[0], dy - startPoint[1]);
+    if (dist < minDist) {
+      minDist = dist;
+      rotationStart = orderIndex;
+    }
+  });
+
+  return [...ordered.slice(rotationStart), ...ordered.slice(0, rotationStart)];
+}
+/**
+ * Checks which waypoint dots the user passed close enough to during tracing.
+ * Returns an array of booleans — one per dot in shape.dotPositions.
+ * 
+ * @param {Array}  touchPoints  — raw touch points {x, y, t} from the trace
+ * @param {Array}  dotPositions — normalised [nx, ny] dot positions from shape
+ * @param {number} shapeSize    — canvas size in pixels (to scale dot positions)
+ * @param {number} threshold    — pixel radius to count as "hit" (default 40px)
+ */
+function computeWaypointCoverage(touchPoints, dotPositions, shapeSize, threshold = 40) {
+  return dotPositions.map(([nx, ny]) => {
+    const px = nx * shapeSize;
+    const py = ny * shapeSize;
+    return touchPoints.some(p => Math.hypot(p.x - px, p.y - py) < threshold);
+  });
+}
 function computePathDeviation(userPoints, scaledIdealPoints) {
   if (userPoints.length < 3)        return 100;
   if (scaledIdealPoints.length === 0) return 100; // FIX: guard empty ideal path
@@ -80,16 +144,45 @@ function buildPathString(points) {
     ''
   );
 }
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guidanceLevel }) {
   const [userPath,      setUserPath]      = useState([]);
   const [isTracing,     setIsTracing]     = useState(false);
   const [trialStarted,  setTrialStarted]  = useState(false);
-
+const hitDotsRef   = useRef([]);   // tracks hit state during live tracing
+const [hitDots, setHitDots] = useState([]); // triggers SVG re-render per hit
+  const nextExpectedDotRef = useRef(0); // enforces ordered dot hits
+  const clockwiseDotOrderRef = useRef([]);
   const touchPointsRef    = useRef([]);
   const trialStartTimeRef = useRef(null);
   const liftCountRef      = useRef(0);
   const isTracingRef      = useRef(false);
+  const shapeSizeRef = useRef(shapeSize);
+useEffect(() => { shapeSizeRef.current = shapeSize; }, [shapeSize]);
+  useEffect(() => {
+    clockwiseDotOrderRef.current = getClockwiseDotOrder(shape.dotPositions, shape.startPoint);
+    nextExpectedDotRef.current = 0;
+  }, [shape]);
+
+  // One Animated.Value per waypoint dot — initialised when shape changes
+  const pulseAnimsRef = useRef([]);
+
+  // Reinitialise pulse animations whenever shape changes
+  useEffect(() => {
+    pulseAnimsRef.current = shape.dotPositions.map(() => new Animated.Value(0));
+  }, [shape]);
+
+  const triggerPulse = useCallback((index) => {
+    const anim = pulseAnimsRef.current[index];
+    if (!anim) return;
+    anim.setValue(0); // reset before playing
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: false, // SVG props can't use native driver
+    }).start();
+  }, []);
 
   // ─── Issue 3 FIX ───────────────────────────────────────────────────────────
   // canvasLayoutRef was used to offset locationX/Y, but PanResponder's
@@ -156,6 +249,15 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     const hesitationCount  = countHesitations(touchPoints);
     const velocityVariance = computeVelocityVariance(touchPoints);
 
+    // ── Waypoint coverage ──────────────────────────────────────────────────────
+// Use live-tracked hits from onPanResponderMove (already computed, no double work)
+const waypointHits = hitDotsRef.current.length === shape.dotPositions.length
+  ? [...hitDotsRef.current]
+  : computeWaypointCoverage(touchPoints, shape.dotPositions, shapeSizeRef.current);
+  // ↑ fallback to computation if ref wasn't initialised (edge case)
+const waypointScore = waypointHits.filter(Boolean).length / 
+  (waypointHits.length || 1); // 0.0 – 1.0
+
     const startDist = Math.hypot(
       (touchPoints[0]?.x ?? 0) - startPt.x,
       (touchPoints[0]?.y ?? 0) - startPt.y
@@ -185,16 +287,28 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
       .filter((_, i) => i % 5 === 0)
       .map(p => ({ t: p.t, x: Math.round(p.x), y: Math.round(p.y) }));
 
-    const metrics = {
-      pathDeviation:    parseFloat(pathDeviation.toFixed(2)),
-      maxDeviation:     parseFloat(maxDeviation.toFixed(2)),
-      completionTimeMs: totalTime,
-      hesitationCount,
-      liftCount:        Math.max(0, liftCountRef.current - 1), // subtract final lift
-      startAccuracy:    parseFloat(startAccuracy.toFixed(3)),
-      endAccuracy:      parseFloat(endAccuracy.toFixed(3)),
-      velocityVariance: parseFloat(velocityVariance.toFixed(4)),
-    };
+const metrics = {
+  pathDeviation:    parseFloat(pathDeviation.toFixed(2)),
+  maxDeviation:     parseFloat(maxDeviation.toFixed(2)),
+  completionTimeMs: totalTime,
+  hesitationCount,
+  liftCount:        Math.max(0, liftCountRef.current - 1),
+  startAccuracy:    parseFloat(startAccuracy.toFixed(3)),
+  endAccuracy:      parseFloat(endAccuracy.toFixed(3)),
+  velocityVariance: parseFloat(velocityVariance.toFixed(4)),
+
+  // ── NEW ──
+  waypointHits,                                          // [true, false, true, …]
+  waypointScore:    parseFloat(waypointScore.toFixed(3)), // 0.000 – 1.000
+  // Blended accuracy: 70% path accuracy + 30% waypoint coverage
+  // pathAccuracy here is a proxy — backend uses its own formula,
+  // but we send a pre-blended hint it can use or ignore
+  blendedAccuracy:  parseFloat(
+    (startAccuracy * 0.15 + endAccuracy * 0.15 + waypointScore * 0.30 +
+     Math.max(0, 1 - pathDeviation / 100) * 0.40
+    ).toFixed(3)
+  ),
+};
 
     // Reset all state
     setTracingState(false);
@@ -203,9 +317,13 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
     touchPointsRef.current    = [];
     trialStartTimeRef.current = null;
     liftCountRef.current      = 0;
+    nextExpectedDotRef.current = 0;
+    console.log('Waypoint hits:', waypointHits);
+console.log('Waypoint score:', waypointScore);
+console.log('Blended accuracy:', metrics.blendedAccuracy);
 
     onTrialComplete({ metrics, touchPathSample, completed });
-  }, [onTrialComplete]); // shape/shapeSize accessed via refs — no stale closure
+  }, [onTrialComplete, shape]); // shape/shapeSize accessed via refs — no stale closure
 
   // ─── PanResponder ─────────────────────────────────────────────────────────
   // Issue 7 FIX: panResponder was in a useRef initialised once at mount, which
@@ -237,6 +355,9 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
           liftCountRef.current      = 0;
           touchPointsRef.current    = [{ t: 0, x, y }];
           setUserPath([{ x, y }]);
+          hitDotsRef.current = new Array(shape.dotPositions.length).fill(false);
+setHitDots([...hitDotsRef.current]);
+nextExpectedDotRef.current = 0;
         }
       },
 
@@ -246,6 +367,21 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
         const t = Date.now() - trialStartTimeRef.current;
         touchPointsRef.current.push({ t, x, y });
         setUserPath(prev => [...prev, { x, y }]);
+        // Live waypoint hit detection
+const hitIndex = checkDotHit(
+  x, y,
+  shape.dotPositions,
+  shapeSizeRef.current
+);
+const expectedDotIndex = clockwiseDotOrderRef.current[nextExpectedDotRef.current];
+if (hitIndex !== -1 &&
+  hitIndex === expectedDotIndex &&           // must match clockwise expected dot
+  !hitDotsRef.current[hitIndex]) {           // must not already be hit
+  hitDotsRef.current[hitIndex] = true;
+  nextExpectedDotRef.current += 1;             // advance the expected pointer
+  setHitDots([...hitDotsRef.current]);
+  triggerPulse(hitIndex);
+}
       },
 
       onPanResponderRelease: (evt) => {
@@ -270,8 +406,16 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
         if (isTracingRef.current) {
           setTracingState(false);
           setUserPath([]);
+          hitDotsRef.current = [];
+          setHitDots([]);
+          nextExpectedDotRef.current = 0;
+          // reset pulse animations
+          if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
+            pulseAnimsRef.current.forEach(a => a.setValue(0));
+          }
           touchPointsRef.current    = [];
           trialStartTimeRef.current = null;
+
         }
       },
     });
@@ -314,6 +458,10 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
           liftCountRef.current      = 0;
           touchPointsRef.current    = [{ t: 0, x, y }];
           setUserPath([{ x, y }]);
+          // initialise hit dots for this trial
+          hitDotsRef.current = new Array(shape.dotPositions.length).fill(false);
+          setHitDots([...hitDotsRef.current]);
+          nextExpectedDotRef.current = 0;
         }
       },
       onPanResponderMove:      (evt) => {
@@ -322,6 +470,17 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
         const t = Date.now() - trialStartTimeRef.current;
         touchPointsRef.current.push({ t, x, y });
         setUserPath(prev => [...prev, { x, y }]);
+        // Live waypoint hit detection (synchronous responder)
+        const hitIndex = checkDotHit(x, y, shape.dotPositions, shapeSizeRef.current);
+        const expectedDotIndex = clockwiseDotOrderRef.current[nextExpectedDotRef.current];
+       if (hitIndex !== -1 &&
+     hitIndex === expectedDotIndex &&           // must match clockwise expected dot
+     !hitDotsRef.current[hitIndex]) {           // must not already be hit
+  hitDotsRef.current[hitIndex] = true;
+  nextExpectedDotRef.current += 1;             // advance the expected pointer
+  setHitDots([...hitDotsRef.current]);
+  triggerPulse(hitIndex);
+}
       },
       onPanResponderRelease:   (evt) => {
         if (!isTracingRef.current) return;
@@ -338,6 +497,10 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
         if (isTracingRef.current) {
           setTracingState(false);
           setUserPath([]);
+          // reset pulse animations
+          if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
+            pulseAnimsRef.current.forEach(a => a.setValue(0));
+          }
           touchPointsRef.current    = [];
           trialStartTimeRef.current = null;
         }
@@ -365,17 +528,44 @@ export default function TracingCanvas({ shape, shapeSize, onTrialComplete, guida
           strokeLinecap="round"
         />
 
-        {/* Guide dots at key waypoints */}
-        {shape.dotPositions.map((pos, i) => (
-          <Circle
-            key={i}
-            cx={pos[0] * shapeSize}
-            cy={pos[1] * shapeSize}
-            r={guidanceLevel === 'full' ? 8 : 5}
-            fill="#A0C8F0"
-            opacity={0.7}
-          />
-        ))}
+        {/* Guide dots at key waypoints (animated pulses) */}
+        {shape.dotPositions.map((pos, i) => {
+          const cx = pos[0] * shapeSize;
+          const cy = pos[1] * shapeSize;
+          const baseR = guidanceLevel === 'full' ? 8 : 5;
+          const isHit = !!hitDots[i];
+          const anim = pulseAnimsRef.current[i] || new Animated.Value(0);
+
+          const ringR = anim.interpolate({
+            inputRange: [0, 0.3, 1],
+            outputRange: [baseR, baseR * 1.5, baseR * 3],
+          });
+          const ringOpacity = anim.interpolate({
+            inputRange: [0, 0.3, 1],
+            outputRange: [0.7, 0.5, 0],
+          });
+
+          return (
+            <G key={i}>
+              <AnimatedCircle
+                cx={cx}
+                cy={cy}
+                r={ringR}
+                stroke="#4CAF50"
+                strokeWidth={2}
+                fill="none"
+                opacity={ringOpacity}
+              />
+              <Circle
+                cx={cx}
+                cy={cy}
+                r={isHit ? baseR * 1.3 : baseR}
+                fill={isHit ? '#4CAF50' : '#A0C8F0'}
+                opacity={isHit ? 1.0 : 0.7}
+              />
+            </G>
+          );
+        })}
 
         {/* Live user tracing path */}
         {userPathString !== '' && (

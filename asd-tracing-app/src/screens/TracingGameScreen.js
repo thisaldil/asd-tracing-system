@@ -10,6 +10,19 @@ import { submitTrial, startSession, endSession, syncOfflineQueue } from '../serv
 import { useChild } from '../context/ChildContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+/**
+ * Determines performance phase from blended accuracy (0.0 – 1.0).
+ * Uses frontend blendedAccuracy — no server roundtrip needed.
+ *
+ * POOR  < 0.40 — gentle retry, no punishment
+ * OK    0.40 – 0.74 — encouraging, acknowledges effort
+ * GREAT ≥ 0.75 — full reward, celebration
+ */
+function getPerformancePhase(blendedAccuracy) {
+  if (blendedAccuracy >= 0.75) return 'great';
+  if (blendedAccuracy >= 0.40) return 'ok';
+  return 'poor';
+}
 
 export default function TracingGameScreen({ navigation }) {
   const { activeChild, cognitiveState, updateCognitiveState } = useChild();
@@ -20,8 +33,7 @@ export default function TracingGameScreen({ navigation }) {
   const [guidanceLevel,   setGuidanceLevel]   = useState('voice');
   const [difficultyLevel, setDifficultyLevel] = useState(1);
   const trialNumberRef = useRef(0); // FIX 3: use ref to avoid race conditions
-  const [showReward,      setShowReward]      = useState(false);
-  const [showGuidance,    setShowGuidance]    = useState(false);
+const [performancePhase, setPerformancePhase] = useState(null); // null | 'poor' | 'ok' | 'great'  const [showGuidance,    setShowGuidance]    = useState(false);
   const [sessionLoading,  setSessionLoading]  = useState(true);
   const [accuracy,        setAccuracy]        = useState(null);
   const sessionTrialsRef = useRef([]);
@@ -124,26 +136,34 @@ async function initSession() {
 
     setAccuracy(Math.round(result.accuracyScore * 100));
 
-    // Trigger reward if accuracy is good
-    if (result.rewardTriggered) {
-      setShowReward(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => {
-        setShowReward(false);
-        pickNextShape(nextLevel);
-      }, 2000);
-    } else {
-      // Soft guidance — no punishment, just a gentle visual cue
-      if (result.adaptationTriggered === 'guidance_added') {
-        setShowGuidance(true);
-        setTimeout(() => {
-          setShowGuidance(false);
-          pickNextShape(difficultyLevel);
-        }, 1500);
-      } else {
-        setTimeout(() => pickNextShape(difficultyLevel), 800);
-      }
-    }
+// ── Phase decision from frontend blendedAccuracy ──────────────────────────
+const phase = getPerformancePhase(metrics.blendedAccuracy);
+setPerformancePhase(phase);
+
+if (phase === 'great') {
+  // Full celebration — earned it
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  setTimeout(() => {
+    setPerformancePhase(null);
+    pickNextShape(nextLevel);
+  }, 2200);
+
+} else if (phase === 'ok') {
+  // Gentle encouragement — light haptic, shorter display
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  setTimeout(() => {
+    setPerformancePhase(null);
+    pickNextShape(nextLevel);
+  }, 1800);
+
+} else {
+  // Poor — no haptic (avoid negative reinforcement), very brief overlay
+  setTimeout(() => {
+    setPerformancePhase(null);
+    // Keep same difficulty — don't advance
+    pickNextShape(difficultyLevel);
+  }, 1600);
+}
   }
 
   // End session and go back
@@ -217,21 +237,32 @@ async function handleEndSession() {
       </View>
 
       {/* Reward overlay */}
-      {showReward && (
-        <View style={styles.rewardOverlay}>
-          <Text style={styles.rewardStar}>★</Text>
-          <Text style={styles.rewardText}>Well done!</Text>
-          <Text style={styles.rewardTextSinhala}>ගොඩාක් හොඳයි!</Text>
-        </View>
-      )}
+      {/* Performance phase overlay — three distinct responses */}
+{performancePhase === 'great' && (
+  <View style={[styles.phaseOverlay, styles.phaseGreat]}>
+    <Text style={styles.phaseStar}>★</Text>
+    <Text style={styles.phaseTitle}>Well done!</Text>
+    <Text style={styles.phaseSinhala}>ගොඩාක් හොඳයි!</Text>
+  </View>
+)}
 
-      {/* Guidance overlay — gentle, not punishment */}
-      {showGuidance && (
-        <View style={styles.guidanceOverlay}>
-          <Text style={styles.guidanceText}>Follow the dots slowly</Text>
-          <Text style={styles.guidanceTextSinhala}>සෙමෙන් dots ගන්න...</Text>
-        </View>
-      )}
+{performancePhase === 'ok' && (
+  <View style={[styles.phaseOverlay, styles.phaseOk]}>
+    <Text style={styles.phaseStar}>👍</Text>
+    <Text style={styles.phaseTitle}>Good try!</Text>
+    <Text style={styles.phaseSinhala}>හොඳයි, නැවත උත්සාහ කරන්න!</Text>
+  </View>
+)}
+
+{performancePhase === 'poor' && (
+  <View style={[styles.phaseOverlay, styles.phasePoor]}>
+    <Text style={styles.phaseStar}>🔵</Text>
+    <Text style={styles.phaseTitle}>Let's try again</Text>
+    <Text style={styles.phaseSinhala}>සෙමෙන් dots follow කරන්න</Text>
+  </View>
+)}
+
+      
 
       {/* Difficulty indicator for therapist/parent to see */}
       <View style={styles.footer}>
@@ -280,15 +311,31 @@ const styles = StyleSheet.create({
       default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }
     })
   },
-  rewardOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(255, 200, 50, 0.92)',
-    justifyContent: 'center', alignItems: 'center',
-    borderRadius: 20,
-  },
-  rewardStar:  { fontSize: 80, color: '#FF8C00' },
-  rewardText:  { fontSize: 36, color: '#3D2B1F', fontWeight: '600', marginTop: 8 },
-  rewardTextSinhala: { fontSize: 22, color: '#5A3E28', marginTop: 4 },
+  // ── Phase overlays ──────────────────────────────────────────────────────────
+phaseOverlay: {
+  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+  justifyContent: 'center', alignItems: 'center',
+  borderRadius: 20,
+},
+phaseGreat: {
+  backgroundColor: 'rgba(255, 200, 50, 0.93)',  // warm gold — celebration
+},
+phaseOk: {
+  backgroundColor: 'rgba(100, 180, 120, 0.88)', // soft green — encouraging
+},
+phasePoor: {
+  backgroundColor: 'rgba(160, 200, 240, 0.88)', // calm blue — no alarm
+},
+phaseStar: {
+  fontSize: 64, marginBottom: 8,
+},
+phaseTitle: {
+  fontSize: 32, color: '#3D2B1F', fontWeight: '600', marginBottom: 6,
+},
+phaseSinhala: {
+  fontSize: 18, color: '#5A3E28', marginTop: 2, textAlign: 'center',
+  paddingHorizontal: 20,
+},
   guidanceOverlay: {
     position: 'absolute', bottom: 100, left: 40, right: 40,
     backgroundColor: 'rgba(100, 160, 220, 0.88)',
