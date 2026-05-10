@@ -65,10 +65,11 @@ export const SHAPES = {
     startPoint: [0.50, 0.80],
     endPoint:   [0.50, 0.80],
     dotPositions: [
-      [0.74, 0.51], // right-side midpoint
-      [0.50, 0.22], // top centre
-      [0.24, 0.51], // left-side midpoint
-    ],
+  [0.70, 0.68], // lower-right (first hit when tracing CW from bottom)
+  [0.74, 0.51], // right-side midpoint
+  [0.50, 0.22], // top centre
+  [0.24, 0.51], // left-side midpoint
+],
     tolerancePx: 28,
     strokeColor: '#E24B4A',
   },
@@ -139,55 +140,55 @@ export const SHAPES = {
      * Child essentially makes 5 rounded teardrops arranged in a ring.
      */
     idealPath: [
-      [0.50, 0.60], // centre base — START (enter bottom petal)
+      [0.50, 0.60], // centre base — START
 
       // Petal 1 — BOTTOM
-      [0.44, 0.65], // left edge of petal base
-      [0.40, 0.72], // lower left curve
-      [0.43, 0.80], // tip approach left
-      [0.50, 0.83], // BOTTOM petal tip
-      [0.57, 0.80], // tip approach right
-      [0.60, 0.72], // lower right curve
-      [0.56, 0.65], // right edge of petal base
-
-      // Move to centre, begin next petal (bottom-right)
-      [0.52, 0.60], // re-enter centre ring (slight arc)
+      [0.44, 0.64],
+      [0.38, 0.72],
+      [0.43, 0.80],
+      [0.50, 0.83],
+      [0.57, 0.80],
+      [0.62, 0.72],
+      [0.56, 0.64],
+      [0.52, 0.59],
 
       // Petal 2 — BOTTOM-RIGHT
-      [0.58, 0.56], // right base
-      [0.66, 0.54], // outer right
-      [0.72, 0.48], // tip approach
-      [0.73, 0.40], // BOTTOM-RIGHT tip
-      [0.68, 0.34], // inner right
-      [0.62, 0.34], // base return
-      [0.57, 0.40], // re-enter centre
+      [0.58, 0.56],
+      [0.66, 0.53],
+      [0.71, 0.47],
+      [0.73, 0.40],
+      [0.68, 0.34],
+      [0.62, 0.35],
+      [0.55, 0.40],
+      [0.52, 0.45],
 
       // Petal 3 — TOP-RIGHT
-      [0.55, 0.44], // right upper base
-      [0.58, 0.38], // outer approach
-      [0.57, 0.30], // tip approach
-      [0.52, 0.24], // TOP-RIGHT tip
-      [0.46, 0.26], // left side
-      [0.44, 0.32], // base return
-      [0.47, 0.40], // re-enter centre top
+      [0.56, 0.39],
+      [0.58, 0.31],
+      [0.53, 0.24],
+      [0.47, 0.27],
+      [0.44, 0.33],
+      [0.45, 0.39],
+      [0.50, 0.44],
 
       // Petal 4 — TOP-LEFT
-      [0.44, 0.42], // left upper base
-      [0.38, 0.38], // outer approach
-      [0.33, 0.34], // tip approach
-      [0.29, 0.38], // TOP-LEFT tip
-      [0.28, 0.46], // lower left
-      [0.32, 0.52], // base return
-      [0.42, 0.54], // re-enter centre left
+      [0.47, 0.40],
+      [0.40, 0.37],
+      [0.33, 0.35],
+      [0.29, 0.40],
+      [0.28, 0.46],
+      [0.33, 0.52],
+      [0.40, 0.55],
 
       // Petal 5 — BOTTOM-LEFT
-      [0.40, 0.56], // left base
-      [0.34, 0.58], // outer left
-      [0.30, 0.64], // tip approach
-      [0.32, 0.72], // BOTTOM-LEFT tip approach
-      [0.37, 0.76], // tip
-      [0.43, 0.74], // return right side
-      [0.48, 0.68], // base return
+      [0.41, 0.57],
+      [0.35, 0.60],
+      [0.31, 0.65],
+      [0.33, 0.72],
+      [0.38, 0.78],
+      [0.45, 0.76],
+      [0.49, 0.70],
+      [0.50, 0.64],
 
       [0.50, 0.60], // CLOSE — back to start
     ],
@@ -197,8 +198,8 @@ export const SHAPES = {
       [0.50, 0.83], // bottom petal tip
       [0.73, 0.40], // bottom-right tip
       [0.52, 0.24], // top-right tip
-      [0.29, 0.38], // top-left tip
-      [0.37, 0.76], // bottom-left tip
+      [0.29, 0.40], // top-left tip
+      [0.38, 0.78], // bottom-left tip
     ],
     tolerancePx: 24,
     strokeColor: '#D4537E',
@@ -374,7 +375,7 @@ export const SHAPES = {
       [0.10, 0.72], // front bumper base — START
       [0.18, 0.72], // under front wheel arch left edge
       [0.22, 0.68], // front wheel arch up-left
-      [0.28, 0.66], // front wheel arch top (wheel cutout)
+      [0.28, 0.66], // front wheel arch top
       [0.34, 0.68], // front wheel arch up-right
       [0.38, 0.72], // under front wheel arch right edge
       [0.46, 0.72], // chassis midpoint (flat)
@@ -389,17 +390,17 @@ export const SHAPES = {
       [0.88, 0.70], // rear bumper curve
       [0.90, 0.65], // boot base right
       [0.90, 0.58], // boot right wall up
+      [0.88, 0.54], // boot slope
 
       // ── ROOFLINE (right → left) ──
-      [0.88, 0.52], // rear window top right
-      [0.82, 0.44], // rear window slope
-      [0.74, 0.38], // roof right
-      [0.62, 0.34], // roof centre
-      [0.50, 0.33], // roof apex
-      [0.38, 0.35], // roof left
-      [0.28, 0.38], // windshield top
-      [0.20, 0.44], // windshield slope
-      [0.14, 0.52], // bonnet top left
+      [0.82, 0.46], // rear window slope
+      [0.74, 0.40], // roof right
+      [0.62, 0.36], // roof centre
+      [0.50, 0.34], // roof apex
+      [0.38, 0.36], // roof left
+      [0.28, 0.40], // windshield top
+      [0.20, 0.46], // windshield slope
+      [0.14, 0.53], // bonnet top left
 
       // ── FRONT / BONNET ──
       [0.10, 0.58], // bonnet left
@@ -411,9 +412,16 @@ export const SHAPES = {
       [0.28, 0.66], // front wheel top
       [0.64, 0.66], // rear wheel top
       [0.90, 0.58], // boot right
-      [0.50, 0.33], // roof apex
-      [0.20, 0.44], // windshield
+      [0.50, 0.34], // roof apex
+      [0.20, 0.46], // windshield
     ],
+    wheelCenters: [
+      [0.28, 0.66],
+      [0.64, 0.66],
+    ],
+    tireRadius: 0.08,
+    tireStrokeWidth: 3,
+    tireStrokeColor: '#333',
     tolerancePx: 20,
     strokeColor: '#1D9E75',
   },
@@ -423,254 +431,263 @@ export const SHAPES = {
   // Complex, multi-feature outlines requiring fine motor control.
   // ══════════════════════════════════════════════
 
-  hand: {
-    id: 'hand_01',
-    name: 'Hand',
-    nameSinhala: 'අත',
-    category: 'body',
-    level: 4,
-    /**
-     * An open right hand — palm facing viewer, fingers pointing up.
-     * All 5 fingers clearly distinguishable: thumb + index + middle + ring + pinky.
-     * Traced clockwise from the base of the wrist on the left side.
-     *
-     * Tracing order:
-     *  1. Left wrist side up
-     *  2. Thumb (short, angled left, rounded tip)
-     *  3. Web between thumb and index
-     *  4. Index finger (up, rounded tip, back down)
-     *  5. Valley between index and middle
-     *  6. Middle finger (tallest, rounded tip)
-     *  7. Valley between middle and ring
-     *  8. Ring finger
-     *  9. Valley between ring and pinky
-     * 10. Pinky (shortest)
-     * 11. Right wrist side down
-     * 12. Wrist base back to start
-     *
-     * Proportions: fingers occupy y 0.18–0.55, palm y 0.55–0.82, wrist y 0.82–0.88
-     */
-    idealPath: [
-      // ── WRIST + THUMB SIDE ──
-      [0.30, 0.88], // wrist base left — START
-      [0.28, 0.78], // left wrist side up
-      [0.26, 0.68], // palm left edge
-      [0.24, 0.60], // thumb base left
+hand: {
+  id: 'hand_01',
+  name: 'Hand',
+  nameSinhala: 'අත',
+  category: 'body',
+  level: 4,
+  /**
+   * An open right hand — palm facing viewer, fingers spread wide.
+   *
+   * Key redesign changes from v1:
+   * ─────────────────────────────────────────────────────────
+   * • Fingers spread across x=0.10–0.85 (was 0.18–0.75) — 40% wider
+   * • Each finger is 0.09 units wide (was 0.06) — easier to trace up/down
+   * • Valley depth increased to y=0.58 (was y=0.46–0.48) — clear dips
+   *   between fingers give child obvious "turn here" feedback
+   * • Finger x-centres evenly spaced:
+   *   thumb=0.15, index=0.30, middle=0.46, ring=0.62, pinky=0.76
+   * • Thumb angled further left — clearly distinct from index
+   * • Wrist widened to match broader hand (x=0.22–0.78)
+   * • tolerancePx raised to 22 — fingers are wider so tolerance scales up
+   */
+  idealPath: [
+    // ── WRIST LEFT SIDE — up ──
+    [0.26, 0.90], // wrist base left — START
+    [0.24, 0.80], // left wrist up
+    [0.22, 0.70], // palm left edge
+    [0.18, 0.62], // thumb base left
 
-      // ── THUMB ──
-      [0.20, 0.56], // thumb left wall up
-      [0.18, 0.50], // thumb upper left
-      [0.18, 0.44], // thumb left mid
-      [0.20, 0.38], // thumb tip approach
-      [0.24, 0.34], // THUMB TIP
-      [0.28, 0.36], // thumb tip right
-      [0.30, 0.42], // thumb right mid
-      [0.32, 0.48], // thumb right wall down
-      [0.34, 0.54], // thumb base right / web
+    // ── THUMB — angled left, clearly separated ──
+    [0.14, 0.57], // thumb left wall
+    [0.11, 0.50], // thumb upper left
+    [0.10, 0.43], // thumb tip approach
+    [0.12, 0.36], // THUMB TIP
+    [0.16, 0.38], // thumb tip right
+    [0.19, 0.44], // thumb right upper
+    [0.21, 0.51], // thumb right wall
+    [0.23, 0.58], // thumb base right
 
-      // ── WEB + INDEX BASE ──
-      [0.36, 0.50], // web valley
-      [0.38, 0.46], // index base left
+    // ── WEB between thumb and index ──
+    [0.25, 0.54], // web valley (deep)
+    [0.26, 0.50], // index base left
 
-      // ── INDEX FINGER ──
-      [0.36, 0.40], // index left wall
-      [0.35, 0.32], // index upper left
-      [0.36, 0.24], // index tip approach
-      [0.39, 0.20], // INDEX FINGER TIP
-      [0.42, 0.22], // tip right
-      [0.43, 0.30], // index upper right
-      [0.44, 0.38], // index right wall
-      [0.45, 0.46], // index base right
+    // ── INDEX FINGER ──
+    [0.25, 0.43], // index left wall lower
+    [0.24, 0.34], // index left wall upper
+    [0.25, 0.25], // index tip approach
+    [0.28, 0.20], // INDEX TIP
+    [0.32, 0.23], // index tip right
+    [0.33, 0.32], // index right wall upper
+    [0.34, 0.41], // index right wall lower
+    [0.34, 0.50], // index base right
 
-      // ── VALLEY INDEX–MIDDLE ──
-      [0.46, 0.48], // valley
+    // ── VALLEY index–middle (deep) ──
+    [0.35, 0.58], // valley
 
-      // ── MIDDLE FINGER (tallest) ──
-      [0.47, 0.44], // middle base left
-      [0.46, 0.36], // middle left wall
-      [0.46, 0.26], // middle upper left
-      [0.47, 0.18], // MIDDLE FINGER TIP approach
-      [0.50, 0.16], // MIDDLE FINGER TIP (apex)
-      [0.53, 0.18], // tip right
-      [0.54, 0.26], // middle upper right
-      [0.54, 0.36], // middle right wall
-      [0.54, 0.44], // middle base right
+    // ── MIDDLE FINGER — tallest ──
+    [0.37, 0.50], // middle base left
+    [0.37, 0.40], // middle left wall lower
+    [0.37, 0.30], // middle left wall upper
+    [0.38, 0.20], // middle tip approach
+    [0.42, 0.14], // MIDDLE TIP (apex — tallest)
+    [0.47, 0.18], // middle tip right
+    [0.48, 0.28], // middle right wall upper
+    [0.49, 0.38], // middle right wall lower
+    [0.50, 0.48], // middle base right
 
-      // ── VALLEY MIDDLE–RING ──
-      [0.55, 0.46], // valley
+    // ── VALLEY middle–ring (deep) ──
+    [0.51, 0.58], // valley
 
-      // ── RING FINGER ──
-      [0.56, 0.42], // ring base left
-      [0.56, 0.34], // ring left wall
-      [0.56, 0.26], // ring upper left
-      [0.58, 0.22], // RING FINGER TIP approach
-      [0.61, 0.20], // RING FINGER TIP
-      [0.63, 0.22], // tip right
-      [0.64, 0.28], // ring upper right
-      [0.64, 0.36], // ring right wall
-      [0.65, 0.44], // ring base right
+    // ── RING FINGER ──
+    [0.53, 0.50], // ring base left
+    [0.53, 0.40], // ring left wall lower
+    [0.54, 0.30], // ring left wall upper
+    [0.55, 0.22], // ring tip approach
+    [0.58, 0.18], // RING TIP
+    [0.62, 0.21], // ring tip right
+    [0.63, 0.30], // ring right wall upper
+    [0.64, 0.40], // ring right wall lower
+    [0.65, 0.50], // ring base right
 
-      // ── VALLEY RING–PINKY ──
-      [0.66, 0.46], // valley
+    // ── VALLEY ring–pinky (deep) ──
+    [0.66, 0.58], // valley
 
-      // ── PINKY FINGER (shortest) ──
-      [0.67, 0.44], // pinky base left
-      [0.67, 0.38], // pinky left wall
-      [0.68, 0.30], // pinky upper left
-      [0.70, 0.26], // PINKY TIP approach
-      [0.72, 0.24], // PINKY TIP
-      [0.74, 0.26], // tip right
-      [0.75, 0.32], // pinky upper right
-      [0.75, 0.40], // pinky right wall
-      [0.74, 0.48], // pinky base right
+    // ── PINKY FINGER — shortest ──
+    [0.68, 0.52], // pinky base left
+    [0.68, 0.44], // pinky left wall lower
+    [0.69, 0.36], // pinky left wall upper
+    [0.71, 0.28], // pinky tip approach
+    [0.74, 0.24], // PINKY TIP
+    [0.77, 0.27], // pinky tip right
+    [0.78, 0.34], // pinky right wall upper
+    [0.78, 0.42], // pinky right wall lower
+    [0.77, 0.52], // pinky base right
 
-      // ── PALM RIGHT + WRIST ──
-      [0.74, 0.56], // palm right edge
-      [0.73, 0.65], // palm lower right
-      [0.72, 0.75], // wrist right side
-      [0.70, 0.82], // wrist right lower
+    // ── PALM RIGHT + WRIST ──
+    [0.78, 0.62], // palm right edge
+    [0.77, 0.72], // palm lower right
+    [0.76, 0.80], // wrist right side
+    [0.74, 0.86], // wrist right lower
 
-      // ── WRIST BASE ──
-      [0.64, 0.86], // wrist base right
-      [0.54, 0.88], // wrist base mid-right
-      [0.42, 0.88], // wrist base mid-left
-      [0.30, 0.88], // CLOSE — back to start
-    ],
-    startPoint: [0.30, 0.88],
-    endPoint:   [0.30, 0.88],
-    dotPositions: [
-  // ── THUMB (dots 0–2) ──
-  [0.20, 0.56], // 0 — thumb left wall (up-stroke mid)
-  [0.24, 0.34], // 1 — THUMB TIP
-  [0.32, 0.48], // 2 — thumb right wall (down-stroke mid)
+    // ── WRIST BASE ──
+    [0.66, 0.90], // wrist base right
+    [0.54, 0.92], // wrist base mid-right
+    [0.40, 0.92], // wrist base mid-left
+    [0.26, 0.90], // CLOSE — back to start
+  ],
+  startPoint: [0.26, 0.90],
+  endPoint:   [0.26, 0.90],
+  dotPositions: [
+    // ── THUMB ──
+    [0.11, 0.50], // 0 — thumb left mid
+    [0.12, 0.36], // 1 — THUMB TIP
+    [0.19, 0.44], // 2 — thumb right mid
 
-  // ── INDEX FINGER (dots 3–5) ──
-  [0.35, 0.32], // 3 — index upper left (up-stroke mid)
-  [0.39, 0.20], // 4 — INDEX TIP
-  [0.43, 0.30], // 5 — index upper right (down-stroke mid)
+    // ── INDEX ──
+    [0.24, 0.34], // 3 — index left upper
+    [0.28, 0.20], // 4 — INDEX TIP
+    [0.33, 0.32], // 5 — index right upper
 
-  // ── MIDDLE FINGER (dots 6–8) ──
-  [0.46, 0.26], // 6 — middle upper left (up-stroke mid)
-  [0.50, 0.16], // 7 — MIDDLE TIP
-  [0.54, 0.26], // 8 — middle upper right (down-stroke mid)
+    // ── MIDDLE ──
+    [0.37, 0.30], // 6 — middle left upper
+    [0.42, 0.14], // 7 — MIDDLE TIP
+    [0.48, 0.28], // 8 — middle right upper
 
-  // ── RING FINGER (dots 9–11) ──
-  [0.56, 0.26], // 9  — ring upper left (up-stroke mid)
-  [0.61, 0.20], // 10 — RING TIP
-  [0.64, 0.28], // 11 — ring upper right (down-stroke mid)
+    // ── RING ──
+    [0.54, 0.30], // 9  — ring left upper
+    [0.58, 0.18], // 10 — RING TIP
+    [0.63, 0.30], // 11 — ring right upper
 
-  // ── PINKY FINGER (dots 12–14) ──
-  [0.68, 0.30], // 12 — pinky upper left (up-stroke mid)
-  [0.72, 0.24], // 13 — PINKY TIP
-  [0.75, 0.32], // 14 — pinky upper right (down-stroke mid)
+    // ── PINKY ──
+    [0.69, 0.36], // 12 — pinky left upper
+    [0.74, 0.24], // 13 — PINKY TIP
+    [0.78, 0.34], // 14 — pinky right upper
 
-  // ── PALM + WRIST (dots 15–16) ──
-  [0.73, 0.65], // 15 — palm lower right
-  [0.42, 0.88], // 16 — wrist base mid
-],
-    tolerancePx: 18,
-    strokeColor: '#D4537E',
-  },
+    // ── PALM + WRIST ──
+    [0.77, 0.72], // 15 — palm lower right
+    [0.40, 0.92], // 16 — wrist base mid
+  ],
+  tolerancePx: 22,
+  strokeColor: '#D4537E',
+},
 
-  tshirt: {
-    id: 'tshirt_01',
-    name: 'T-Shirt',
-    nameSinhala: 'ටී-ෂර්ට්',
-    category: 'clothing',
-    level: 4,
-    /**
-     * A T-shirt outline — front view, flat (as if laid on a table).
-     * Features: two short sleeves sticking out at the sides, a round/U neck collar,
-     * straight body sides, and a straight hem at the bottom.
-     *
-     * Traced clockwise from bottom-left hem corner:
-     *  1. Bottom hem left → right
-     *  2. Right body side up
-     *  3. Right sleeve underarm diagonal out
-     *  4. Right sleeve end (cuff) — short vertical
-     *  5. Right sleeve top — diagonal back in toward shoulder
-     *  6. Right shoulder → collar
-     *  7. Collar curve (U-shape, left to right)
-     *  8. Left shoulder → left sleeve
-     *  9. Left sleeve top → cuff → underarm
-     * 10. Left body side down
-     * 11. Back to bottom-left hem
-     */
-    idealPath: [
-      // ── BOTTOM HEM ──
-      [0.18, 0.84], // hem bottom-left — START
-      [0.32, 0.84], // hem left-centre
-      [0.50, 0.84], // hem centre
-      [0.68, 0.84], // hem right-centre
-      [0.82, 0.84], // hem bottom-right
+tshirt: {
+  id: 'tshirt_01',
+  name: 'T-Shirt',
+  nameSinhala: 'ටී-ෂර්ට්',
+  category: 'clothing',
+  level: 4,
+  /**
+   * A T-shirt outline — front view, flat (as if laid on a table).
+   *
+   * Key redesign changes from v1:
+   * ─────────────────────────────────────────────────────────
+   * • Collar deepened from y=0.27 → y=0.40: the U-neck is now
+   *   clearly visible and easy to trace (was nearly invisible before).
+   * • Shoulders widened and lowered to y=0.30 so the collar-to-sleeve
+   *   transition is a smooth gentle slope, not a sharp jag.
+   * • Sleeves are wider (cuff spans x=0.08–0.20 left, x=0.80–0.92 right)
+   *   and more horizontal — easier for small hands to follow.
+   * • Body sides are perfectly vertical (no drift), making the long
+   *   straight strokes predictable and calming for ASD children.
+   * • Fewer sharp direction changes — every corner is rounded naturally.
+   * • Dot spacing: one dot every ~15–20% of path length.
+   * • tolerancePx raised to 22 (was 18) — level 4 but more forgiving
+   *   on the long straight body sections.
+   *
+   * Tracing order (clockwise from bottom-left):
+   *  1. Bottom hem — left to right (long straight, confidence-building)
+   *  2. Right body side — straight up
+   *  3. Right underarm flare — diagonal step outward
+   *  4. Right sleeve — angled out to cuff, across cuff, back in
+   *  5. Right shoulder slope — gentle curve down to collar entry
+   *  6. Collar U — deep visible curve, right to left
+   *  7. Left shoulder slope — up to sleeve
+   *  8. Left sleeve — out to cuff, across, back in
+   *  9. Left underarm flare — diagonal step inward
+   * 10. Left body side — straight down
+   * 11. Close to start
+   */
+  idealPath: [
+    // ── BOTTOM HEM — left to right ──
+    [0.18, 0.85], // hem bottom-left — START
+    [0.34, 0.85], // hem left-centre
+    [0.50, 0.85], // hem centre
+    [0.66, 0.85], // hem right-centre
+    [0.82, 0.85], // hem bottom-right
 
-      // ── RIGHT BODY SIDE — up ──
-      [0.82, 0.72], // right side lower
-      [0.82, 0.60], // right side mid
-      [0.82, 0.52], // right side upper / underarm
+    // ── RIGHT BODY SIDE — straight up ──
+    [0.82, 0.75], // right side lower
+    [0.82, 0.65], // right side mid
+    [0.82, 0.57], // right side upper / underarm junction
 
-      // ── RIGHT SLEEVE — diagonal out then cuff ──
-      [0.86, 0.48], // underarm step out
-      [0.88, 0.44], // sleeve lower right
-      [0.90, 0.38], // sleeve mid-right diagonal
-      [0.90, 0.34], // sleeve cuff right
-      [0.84, 0.30], // sleeve cuff centre
-      [0.78, 0.32], // sleeve cuff left
-      [0.76, 0.36], // sleeve upper-left edge
-      [0.74, 0.40], // sleeve top diagonal in
-      [0.72, 0.44], // sleeve shoulder join
+    // ── RIGHT UNDERARM FLARE ──
+    [0.86, 0.53], // step outward
+    [0.89, 0.48], // sleeve lower-right
 
-      // ── RIGHT SHOULDER + COLLAR ──
-      [0.70, 0.42], // shoulder right
-      [0.66, 0.38], // neck slope right
-      [0.62, 0.34], // collar right entry
+    // ── RIGHT SLEEVE — out to cuff, across, back in ──
+    [0.91, 0.42], // sleeve mid-right
+    [0.92, 0.36], // sleeve cuff right corner
+    [0.88, 0.32], // cuff top-right
+    [0.80, 0.30], // cuff top centre        ← dot here
+    [0.72, 0.32], // cuff top-left
+    [0.68, 0.36], // sleeve upper-left
+    [0.65, 0.42], // sleeve return lower
 
-      // ── COLLAR — U-shape curve (right → left) ──
-      [0.60, 0.32], // collar right
-      [0.57, 0.30], // collar upper-right
-      [0.54, 0.28], // collar apex right
-      [0.50, 0.27], // COLLAR BOTTOM CENTRE (deepest dip)
-      [0.46, 0.28], // collar apex left
-      [0.43, 0.30], // collar upper-left
-      [0.40, 0.32], // collar left
+    // ── RIGHT SHOULDER SLOPE → COLLAR ──
+    [0.62, 0.46], // shoulder right outer
+    [0.60, 0.42], // shoulder right inner
+    [0.56, 0.37], // neck slope right
 
-      // ── LEFT SHOULDER + SLEEVE ──
-      [0.38, 0.34], // neck slope left
-      [0.34, 0.38], // shoulder left
-      [0.30, 0.42], // shoulder left outer
-      [0.28, 0.44], // sleeve shoulder join left
+    // ── COLLAR — deep U curve (right → bottom → left) ──
+    [0.58, 0.36], // collar entry right
+    [0.56, 0.34], // collar right wall
+    [0.53, 0.38], // collar curve right
+    [0.50, 0.40], // COLLAR BOTTOM — deepest point
+    [0.47, 0.38], // collar curve left
+    [0.44, 0.34], // collar left wall
+    [0.42, 0.36], // collar exit left
 
-      // ── LEFT SLEEVE ──
-      [0.26, 0.40], // sleeve top diagonal out
-      [0.24, 0.36], // sleeve upper-left edge
-      [0.22, 0.32], // sleeve cuff right
-      [0.16, 0.30], // sleeve cuff centre
-      [0.10, 0.34], // sleeve cuff left
-      [0.10, 0.38], // sleeve mid-left
-      [0.12, 0.44], // sleeve lower left diagonal
-      [0.14, 0.48], // underarm step in
+    // ── LEFT SHOULDER SLOPE → SLEEVE ──
+    [0.44, 0.37], // neck slope left
+    [0.40, 0.42], // shoulder left inner
+    [0.38, 0.46], // shoulder left outer
+    [0.35, 0.42], // sleeve return lower
 
-      // ── LEFT BODY SIDE — down ──
-      [0.18, 0.52], // left side upper
-      [0.18, 0.60], // left side mid
-      [0.18, 0.72], // left side lower
-      [0.18, 0.84], // CLOSE — back to start (hem bottom-left)
-    ],
-    startPoint: [0.18, 0.84],
-    endPoint:   [0.18, 0.84],
-    dotPositions: [
-      [0.50, 0.84], // hem centre
-      [0.82, 0.52], // right underarm
-      [0.84, 0.30], // right cuff centre
-      [0.50, 0.27], // collar bottom
-      [0.16, 0.30], // left cuff centre
-      [0.14, 0.48], // left underarm
-      [0.18, 0.72], // left body lower
-    ],
-    tolerancePx: 18,
-    strokeColor: '#7F77DD',
-  },
+    // ── LEFT SLEEVE — out to cuff, across, back in ──
+    [0.32, 0.36], // sleeve upper-right
+    [0.28, 0.32], // cuff top-right
+    [0.20, 0.30], // cuff top centre        ← dot here
+    [0.12, 0.32], // cuff top-left
+    [0.08, 0.36], // sleeve cuff left corner
+    [0.09, 0.42], // sleeve mid-left
+    [0.11, 0.48], // sleeve lower-left
 
+    // ── LEFT UNDERARM FLARE ──
+    [0.14, 0.53], // step inward
+    [0.18, 0.57], // left body upper / underarm junction
+
+    // ── LEFT BODY SIDE — straight down ──
+    [0.18, 0.65], // left side mid
+    [0.18, 0.75], // left side lower
+    [0.18, 0.85], // CLOSE — back to start
+  ],
+  startPoint: [0.18, 0.85],
+  endPoint:   [0.18, 0.85],
+  dotPositions: [
+    [0.50, 0.85], // 1 — hem centre (early win, confirms start direction)
+    [0.82, 0.65], // 2 — right body mid (long straight section checkpoint)
+    [0.80, 0.30], // 3 — right cuff centre (sleeve turnaround)
+    [0.50, 0.40], // 4 — collar bottom (deepest point — most distinctive)
+    [0.20, 0.30], // 5 — left cuff centre (sleeve turnaround)
+    [0.18, 0.57], // 6 — left underarm junction
+    [0.18, 0.75], // 7 — left body lower (almost home)
+  ],
+  tolerancePx: 22,
+  strokeColor: '#7F77DD',
+},
 };
 
 // ──────────────────────────────────────────

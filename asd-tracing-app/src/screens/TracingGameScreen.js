@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Alert, Vibration,
-  Dimensions, ActivityIndicator, Platform
+  Dimensions, ActivityIndicator, Platform,
+  TouchableOpacity, Modal, FlatList
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import TracingCanvas from '../components/TracingCanvas';
@@ -31,7 +32,8 @@ export default function TracingGameScreen({ navigation }) {
   const [currentShape,    setCurrentShape]    = useState(null);
   const [shapeSize,       setShapeSize]       = useState(240);
   const [guidanceLevel,   setGuidanceLevel]   = useState('voice');
-  const [difficultyLevel, setDifficultyLevel] = useState(1);
+const [difficultyLevel, setDifficultyLevel] = useState(1);
+const [showLevelPicker, setShowLevelPicker] = useState(false);
   const trialNumberRef = useRef(0); // FIX 3: use ref to avoid race conditions
 const [performancePhase, setPerformancePhase] = useState(null); // null | 'poor' | 'ok' | 'great'  const [showGuidance,    setShowGuidance]    = useState(false);
   const [sessionLoading,  setSessionLoading]  = useState(true);
@@ -93,6 +95,16 @@ async function initSession() {
   function getGuidanceForDifficulty(level) {
     return { 1: 'full', 2: 'voice', 3: 'subtle', 4: 'none', 5: 'none' }[level] || 'voice';
   }
+
+  // ADD THIS — called when user picks a level from dropdown:
+function handleLevelSelect(level) {
+  setShowLevelPicker(false);
+  setDifficultyLevel(level);
+  setShapeSize(getSizeForDifficulty(level));
+  setGuidanceLevel(getGuidanceForDifficulty(level));
+  setAccuracy(null);        // clear old accuracy display
+  pickNextShape(level);     // immediately load a shape for that level
+}
 
   /**
    * Called by TracingCanvas when a tracing attempt ends
@@ -265,11 +277,60 @@ async function handleEndSession() {
       
 
       {/* Difficulty indicator for therapist/parent to see */}
-      <View style={styles.footer}>
-        <Text style={styles.difficultyText}>Level {difficultyLevel}</Text>
-        <Text style={styles.trialCountText}>Trial {trialNumberRef.current}</Text>
-        <Text style={styles.endButton} onPress={handleEndSession}>End Session</Text>
-      </View>
+     {/* Level picker modal */}
+<Modal
+  visible={showLevelPicker}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowLevelPicker(false)}
+>
+  <TouchableOpacity
+    style={styles.modalBackdrop}
+    activeOpacity={1}
+    onPress={() => setShowLevelPicker(false)}
+  >
+    <View style={styles.pickerContainer}>
+      <Text style={styles.pickerTitle}>Select Level</Text>
+      {[
+        { level: 1, label: 'Level 1 — Ball & Star',       hint: 'Simple circles and shapes' },
+        { level: 2, label: 'Level 2 — Flower & Banana',   hint: 'Gentle curves' },
+        { level: 3, label: 'Level 3 — Ship & Car',        hint: 'Compound outlines' },
+        { level: 4, label: 'Level 4 — Hand & T-Shirt',    hint: 'Fine motor control' },
+      ].map(({ level, label, hint }) => (
+        <TouchableOpacity
+          key={level}
+          style={[
+            styles.pickerItem,
+            difficultyLevel === level && styles.pickerItemActive,
+          ]}
+          onPress={() => handleLevelSelect(level)}
+        >
+          <Text style={[
+            styles.pickerItemText,
+            difficultyLevel === level && styles.pickerItemTextActive,
+          ]}>
+            {label}
+          </Text>
+          <Text style={styles.pickerItemHint}>{hint}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </TouchableOpacity>
+</Modal>
+
+{/* Footer */}
+<View style={styles.footer}>
+  <TouchableOpacity
+    style={styles.levelButton}
+    onPress={() => setShowLevelPicker(true)}
+  >
+    <Text style={styles.levelButtonText}>Level {difficultyLevel} ▾</Text>
+  </TouchableOpacity>
+  <Text style={styles.trialCountText}>Trial {trialNumberRef.current}</Text>
+  <TouchableOpacity onPress={handleEndSession}>
+    <Text style={styles.endButton}>End Session</Text>
+  </TouchableOpacity>
+</View>
 
     </View>
   );
@@ -351,4 +412,71 @@ phaseSinhala: {
   difficultyText: { fontSize: 14, color: '#8B7355', backgroundColor: '#F0E8D8', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   trialCountText: { fontSize: 14, color: '#8B7355' },
   endButton:      { fontSize: 14, color: '#C0392B', fontWeight: '500', paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#C0392B', borderRadius: 8 },
+
+  // ADD THESE:
+levelButton: {
+  backgroundColor: '#F0E8D8',
+  paddingHorizontal: 14,
+  paddingVertical: 6,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#C8B89A',
+},
+levelButtonText: {
+  fontSize: 14,
+  color: '#5A3E28',
+  fontWeight: '500',
+},
+modalBackdrop: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.35)',
+  justifyContent: 'flex-end',
+  paddingBottom: 40,
+  paddingHorizontal: 20,
+},
+pickerContainer: {
+  backgroundColor: '#FFFDF5',
+  borderRadius: 20,
+  paddingVertical: 12,
+  paddingHorizontal: 8,
+  ...Platform.select({
+    web: { boxShadow: '0 -4px 20px rgba(0,0,0,0.12)' },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+  }),
+},
+pickerTitle: {
+  fontSize: 13,
+  color: '#8B7355',
+  textAlign: 'center',
+  marginBottom: 8,
+  letterSpacing: 0.5,
+},
+pickerItem: {
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  borderRadius: 12,
+  marginVertical: 2,
+},
+pickerItemActive: {
+  backgroundColor: '#F0E8D8',
+},
+pickerItemText: {
+  fontSize: 16,
+  color: '#3D2B1F',
+  fontWeight: '500',
+},
+pickerItemTextActive: {
+  color: '#8B4513',
+},
+pickerItemHint: {
+  fontSize: 12,
+  color: '#8B7355',
+  marginTop: 2,
+},
 });

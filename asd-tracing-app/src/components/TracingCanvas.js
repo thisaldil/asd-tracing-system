@@ -1,4 +1,5 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+// AFTER:
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, PanResponder, StyleSheet, Dimensions, Animated } from 'react-native';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 // ← AnimatedCircle import removed from here
@@ -51,16 +52,20 @@ function getClockwiseDotOrder(dotPositions, startPoint) {
     return ordered;
   }
 
-  let rotationStart = 0;
-  let minDist = Infinity;
-  ordered.forEach((dotIndex, orderIndex) => {
-    const [dx, dy] = dotPositions[dotIndex];
-    const dist = Math.hypot(dx - startPoint[0], dy - startPoint[1]);
-    if (dist < minDist) {
-      minDist = dist;
-      rotationStart = orderIndex;
-    }
-  });
+// REPLACE WITH THIS:
+let rotationStart = 0;
+let minAngleDiff = Infinity;
+const startAngle = Math.atan2(startPoint[1] - cy, startPoint[0] - cx);
+ordered.forEach((dotIndex, orderIndex) => {
+  const [dx, dy] = dotPositions[dotIndex];
+  const dotAngle = Math.atan2(dy - cy, dx - cx);
+  let diff = dotAngle - startAngle;
+  if (diff <= 0) diff += Math.PI * 2;
+  if (diff < minAngleDiff) {
+    minAngleDiff = diff;
+    rotationStart = orderIndex;
+  }
+});
 
   return [...ordered.slice(rotationStart), ...ordered.slice(0, rotationStart)];
 }
@@ -199,10 +204,11 @@ useEffect(() => { shapeSizeRef.current = shapeSize; }, [shapeSize]);
   // Issue 4 FIX: memoize via useMemo equivalent — recompute only when
   // shape or shapeSize changes, not on every render caused by setUserPath.
   // We use a ref-based cache to avoid adding useMemo dep on shape identity.
-  const scaledIdealPath = shape.idealPath.map(([x, y]) => ({
-    x: x * shapeSize,
-    y: y * shapeSize,
-  }));
+// REPLACE WITH:
+const scaledIdealPath = useMemo(() =>
+  shape.idealPath.map(([x, y]) => ({ x: x * shapeSize, y: y * shapeSize })),
+  [shape, shapeSize]
+);
 
   const startPoint = {
     x: shape.startPoint[0] * shapeSize,
@@ -348,7 +354,7 @@ console.log('Blended accuracy:', metrics.blendedAccuracy);
         // locationX/Y are already canvas-relative — no offset needed (Issue 3 FIX)
         const distToStart = Math.hypot(x - startPointRef.current.x, y - startPointRef.current.y);
 
-        if (distToStart < 44) { // 44px — minimum tap target per WCAG
+        if (distToStart < 60) { // 44px — minimum tap target per WCAG
           setTracingState(true);
           setTrialStarted(true);
           trialStartTimeRef.current = Date.now();
@@ -402,22 +408,21 @@ if (hitIndex !== -1 &&
       // ─── Issue 8 FIX ───────────────────────────────────────────────────────
       // Added onPanResponderTerminate so if another gesture (scroll, system UI)
       // steals the responder, we cleanly stop tracing instead of hanging forever.
-      onPanResponderTerminate: () => {
-        if (isTracingRef.current) {
-          setTracingState(false);
-          setUserPath([]);
-          hitDotsRef.current = [];
-          setHitDots([]);
-          nextExpectedDotRef.current = 0;
-          // reset pulse animations
-          if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
-            pulseAnimsRef.current.forEach(a => a.setValue(0));
-          }
-          touchPointsRef.current    = [];
-          trialStartTimeRef.current = null;
-
-        }
-      },
+      // AFTER (both occurrences):
+onPanResponderTerminate: () => {
+  if (isTracingRef.current) {
+    setTracingState(false);
+    setUserPath([]);
+    hitDotsRef.current = [];
+    setHitDots([]);
+    nextExpectedDotRef.current = 0;
+    if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
+      pulseAnimsRef.current.forEach(a => a.setValue(0));
+    }
+    touchPointsRef.current    = [];
+    trialStartTimeRef.current = null;
+  }
+},
     });
   }, [shape, shapeSize, finaliseTrial]);
 
@@ -451,7 +456,7 @@ if (hitIndex !== -1 &&
       onPanResponderGrant:     (evt) => {
         const { locationX: x, locationY: y } = evt.nativeEvent;
         const distToStart = Math.hypot(x - startPointRef.current.x, y - startPointRef.current.y);
-        if (distToStart < 44) {
+        if (distToStart < 60) {
           setTracingState(true);
           setTrialStarted(true);
           trialStartTimeRef.current = Date.now();
@@ -493,18 +498,21 @@ if (hitIndex !== -1 &&
           setTracingState(false);
         }
       },
-      onPanResponderTerminate: () => {
-        if (isTracingRef.current) {
-          setTracingState(false);
-          setUserPath([]);
-          // reset pulse animations
-          if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
-            pulseAnimsRef.current.forEach(a => a.setValue(0));
-          }
-          touchPointsRef.current    = [];
-          trialStartTimeRef.current = null;
-        }
-      },
+      // AFTER (both occurrences):
+onPanResponderTerminate: () => {
+  if (isTracingRef.current) {
+    setTracingState(false);
+    setUserPath([]);
+    hitDotsRef.current = [];
+    setHitDots([]);
+    nextExpectedDotRef.current = 0;
+    if (pulseAnimsRef.current && pulseAnimsRef.current.length) {
+      pulseAnimsRef.current.forEach(a => a.setValue(0));
+    }
+    touchPointsRef.current    = [];
+    trialStartTimeRef.current = null;
+  }
+},
     });
     panHandlersRef.current = panResponderRef.current.panHandlers;
   }
@@ -527,6 +535,20 @@ if (hitIndex !== -1 &&
           fill="none"
           strokeLinecap="round"
         />
+
+        {/* Optional dotted tire rings for vehicle shapes */}
+        {Array.isArray(shape.wheelCenters) && shape.wheelCenters.map((center, i) => (
+          <Circle
+            key={`tire-${i}`}
+            cx={center[0] * shapeSize}
+            cy={center[1] * shapeSize}
+            r={(shape.tireRadius || 0.08) * shapeSize}
+            stroke={shape.tireStrokeColor || '#333'}
+            strokeWidth={shape.tireStrokeWidth || 3}
+            strokeDasharray="4,4"
+            fill="none"
+          />
+        ))}
 
         {/* Guide dots at key waypoints (animated pulses) */}
         {shape.dotPositions.map((pos, i) => {
