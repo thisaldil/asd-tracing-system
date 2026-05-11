@@ -287,3 +287,88 @@ export async function getParentChildren(parentId) {
     throw error;
   }
 }
+
+/* =========================================================
+   BEHAVIOUR GAME API
+   Add these functions to the bottom of your apiService.js
+   (before the last closing line)
+========================================================= */
+
+/**
+ * Fetch next adaptive scenario for a child
+ * @param {string} childId
+ * @param {number} difficulty - current difficulty 1|2|3
+ * @param {string[]} excludeIds - scenarioIds already shown this session
+ */
+export async function getNextBehaviourScenario(childId, difficulty = 1, excludeIds = []) {
+  try {
+    const params = new URLSearchParams({
+      childId,
+      difficulty: difficulty.toString(),
+    });
+    if (excludeIds.length > 0) {
+      params.append('excludeIds', excludeIds.join(','));
+    }
+    const res = await api.get(`/behaviour/scenarios/next?${params.toString()}`);
+    return res.data;
+  } catch (error) {
+    console.log('getNextBehaviourScenario failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Record a single behaviour trial answer
+ * @param {object} trialData
+ */
+export async function submitBehaviourTrial(trialData) {
+  try {
+    const res = await api.post('/behaviour/trials', trialData);
+    return res.data;
+  } catch (error) {
+    console.log('submitBehaviourTrial failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get session summary after game ends
+ * @param {string} sessionId
+ */
+export async function getBehaviourSessionSummary(sessionId) {
+  try {
+    const res = await api.get(`/behaviour/trials/session/${sessionId}`);
+    return res.data;
+  } catch (error) {
+    console.log('getBehaviourSessionSummary failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get full behaviour dashboard for parent
+ * @param {string} childId
+ */
+export async function getBehaviourDashboard(childId) {
+  try {
+    const res = await api.get(`/behaviour/dashboard/${childId}`);
+    return res.data;
+  } catch (error) {
+    console.log('getBehaviourDashboard failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get lightweight progress for home screen widget
+ * @param {string} childId
+ */
+export async function getBehaviourProgress(childId) {
+  try {
+    const res = await api.get(`/behaviour/dashboard/${childId}/progress`);
+    return res.data;
+  } catch (error) {
+    console.log('getBehaviourProgress failed:', error.message);
+    return null;
+  }
+}

@@ -12,63 +12,59 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import ChildSetupScreen from './src/screens/auth/ChildSetupScreen';
 import ChildSelectScreen from './src/screens/auth/ChildSelectScreen';
 
-// App Screens
+// App Screens — Game 1: Tracing
 import ParentDashboardScreen from './src/screens/ParentDashboardScreen';
 import TracingGameScreen from './src/screens/TracingGameScreen';
 
+// App Screens — Game 2: Behaviour picture-choice
+import BehaviourGameScreen from './src/screens/BehaviourGameScreen';
+import BehaviourResultScreen from './src/screens/BehaviourResultScreen';
+
 const Stack = createStackNavigator();
 
-// Auth Stack Navigator (Login/Register only)
+// ─── Auth Stack ───────────────────────────────────────────
 function AuthStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        animationEnabled: true,
-      }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false, animationEnabled: true }}>
+      <Stack.Screen name="Login"    component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }
 
-// Child Selection Stack (ChildSetup/ChildSelect - shown after login but before child selected)
+// ─── Child Select Stack ───────────────────────────────────
 function ChildSelectStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        animationEnabled: true,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false, animationEnabled: true }}>
       <Stack.Screen name="ChildSelect" component={ChildSelectScreen} />
-      <Stack.Screen name="ChildSetup" component={ChildSetupScreen} />
+      <Stack.Screen name="ChildSetup"  component={ChildSetupScreen} />
     </Stack.Navigator>
   );
 }
 
-// App Stack Navigator
+// ─── App Stack ────────────────────────────────────────────
 function AppStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
-      <Stack.Screen name="TracingGame" component={TracingGameScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Main dashboard */}
+      <Stack.Screen name="ParentDashboard"  component={ParentDashboardScreen} />
+
+      {/* Game 1 — Tracing */}
+      <Stack.Screen name="TracingGame"      component={TracingGameScreen} />
+
+      {/* Game 2 — Behaviour */}
+      <Stack.Screen name="BehaviourGame"    component={BehaviourGameScreen} />
+      <Stack.Screen name="BehaviourResult"  component={BehaviourResultScreen} />
     </Stack.Navigator>
   );
 }
 
-// Main Navigator Component
+// ─── Root Navigator ───────────────────────────────────────
 function RootNavigator() {
   const { parentProfile, activeChild, authToken } = useChild();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    // Check if user has valid token on app startup
     const checkAuth = async () => {
       try {
         const token = await storage.get('auth_token');
@@ -79,32 +75,22 @@ function RootNavigator() {
         }
       } catch (error) {
         console.warn('[Auth Check] Error checking auth (will default to login):', error.message);
-        // Errors are handled gracefully - user will see login screen
       } finally {
-        // Delay slightly to allow ChildContext to rehydrate
-        setTimeout(() => {
-          setIsCheckingAuth(false);
-        }, 500);
+        setTimeout(() => setIsCheckingAuth(false), 500);
       }
     };
-
     checkAuth();
   }, []);
 
-  if (isCheckingAuth) {
-    return null; // Could show a splash screen here
-  }
+  if (isCheckingAuth) return null;
 
   return (
     <NavigationContainer>
       {!parentProfile ? (
-        // Not logged in → Show Login/Register
         <AuthStack />
       ) : !activeChild ? (
-        // Logged in but no child selected → Show ChildSelect/ChildSetup
         <ChildSelectStack />
       ) : (
-        // Fully ready → Show main app with TracingGame
         <AppStack />
       )}
     </NavigationContainer>

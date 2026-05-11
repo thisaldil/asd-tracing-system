@@ -9,7 +9,7 @@ const behaviourTrialSchema = new mongoose.Schema(
   {
     childId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Child',
+      ref: 'ChildProfile',
       required: true,
       index: true,
     },

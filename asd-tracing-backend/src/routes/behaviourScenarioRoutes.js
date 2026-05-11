@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BehaviourScenario = require('../models/BehaviourScenario');
 const BehaviourTrial = require('../models/BehaviourTrial');
-const { protect } = require('../middleware/authMiddleware'); // reuse your existing auth middleware
+const { requireAuth } = require('../middleware/auth'); // reuse your existing auth middleware
 
 // ─── Helper: Adaptive difficulty selection ───────────────────────────────────
 /**
@@ -49,7 +49,7 @@ async function getAdaptiveDifficulty(childId, currentDifficulty) {
  *   category      (optional, filter by category)
  *   excludeIds    (optional, comma-separated scenarioIds to avoid repeating in session)
  */
-router.get('/next', protect, async (req, res) => {
+router.get('/next', requireAuth, async (req, res) => {
   try {
     const { childId, difficulty = 1, category, excludeIds } = req.query;
 
@@ -115,7 +115,7 @@ router.get('/next', protect, async (req, res) => {
 
 // ─── GET /api/behaviour/scenarios ────────────────────────────────────────────
 // List all scenarios (admin / seed check use)
-router.get('/', protect, async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const { category, difficulty, isActive = 'true' } = req.query;
     const query = { isActive: isActive === 'true' };
@@ -132,7 +132,7 @@ router.get('/', protect, async (req, res) => {
 
 // ─── POST /api/behaviour/scenarios ───────────────────────────────────────────
 // Add a new scenario (admin use / future CMS)
-router.post('/', protect, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const scenario = await BehaviourScenario.create(req.body);
     res.status(201).json({ message: 'Scenario created', scenario });
@@ -147,7 +147,7 @@ router.post('/', protect, async (req, res) => {
 
 // ─── PUT /api/behaviour/scenarios/:id ────────────────────────────────────────
 // Update a scenario (admin use)
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
     const scenario = await BehaviourScenario.findByIdAndUpdate(
       req.params.id,
@@ -163,7 +163,7 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // ─── DELETE /api/behaviour/scenarios/:id (soft delete) ───────────────────────
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const scenario = await BehaviourScenario.findByIdAndUpdate(
       req.params.id,

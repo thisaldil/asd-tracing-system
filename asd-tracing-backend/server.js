@@ -12,12 +12,12 @@ connectDB();
 
 const app = express();
 
-// Security and parsing middleware
+// ─── Security and parsing middleware ─────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // 10mb to allow touch path arrays
 
-// Routes (we will create these files next)
+// ─── Game 1: Tracing game routes ─────────────────────────────────────────────
 app.use('/api/auth',      require('./src/routes/authRoutes'));
 app.use('/api/children',  require('./src/routes/childRoutes'));
 app.use('/api/trials',    require('./src/routes/trialRoutes'));
@@ -25,12 +25,17 @@ app.use('/api/sessions',  require('./src/routes/sessionRoutes'));
 app.use('/api/cognitive', require('./src/routes/cognitiveRoutes'));
 app.use('/api/dashboard', require('./src/routes/dashboardRoutes'));
 
-// Health check endpoint
+// ─── Game 2: Behaviour picture-choice game routes ─────────────────────────────
+app.use('/api/behaviour/scenarios',  require('./src/routes/behaviourScenarioRoutes'));
+app.use('/api/behaviour/trials',     require('./src/routes/behaviourTrialRoutes'));
+app.use('/api/behaviour/dashboard',  require('./src/routes/behaviourDashboardRoutes'));
+
+// ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'ASD Tracing API is running' });
 });
 
-// Global error handler
+// ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong', details: err.message });

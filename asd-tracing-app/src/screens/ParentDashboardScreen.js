@@ -201,7 +201,7 @@ function LoadingSkeleton() {
 
 // ─── Main screen ──────────────────────────────────────────
 export default function ParentDashboardScreen({ navigation }) {
-  const { activeChild } = useChild();
+  const { activeChild, parentProfile } = useChild();
   const { logout } = useChild();
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -209,7 +209,8 @@ export default function ParentDashboardScreen({ navigation }) {
 
   const childId = activeChild?._id || '69e0e39c84040d2901db4b04';
   const childName = activeChild?.alias || 'Kavindu';
-  const parentInitial = 'A';
+  const parentName = parentProfile?.fullName || 'Parent';
+  const parentInitial = parentName?.[0]?.toUpperCase() || 'P';
 
   useEffect(() => { loadDashboard(); }, []);
 
@@ -284,7 +285,7 @@ export default function ParentDashboardScreen({ navigation }) {
             <View style={s.heroTop}>
               <View>
                 <Text style={s.heroGreetSm}>{getHour()},</Text>
-                <Text style={s.heroGreet}>Amma / Thaththa</Text>
+                <Text style={s.heroGreet}>{parentName}</Text>
               </View>
               <View style={s.heroTopRight}>
                 <TouchableOpacity style={s.heroIconBtn}>
@@ -344,6 +345,31 @@ export default function ParentDashboardScreen({ navigation }) {
                 <View>
                   <Text style={s.ctaTitle}>Start New Trial</Text>
                   <Text style={s.ctaSi}>ට්‍රයල් ආරම්භ කරන්න</Text>
+                </View>
+              </View>
+              <Ionicons name="arrow-forward-circle" size={30} color="rgba(255,255,255,0.8)" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </FadeSlide>
+
+        <FadeSlide delay={120}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => navigation.navigate('BehaviourGame')}
+            style={[s.ctaWrap, { marginTop: 10 }]}
+          >
+            <LinearGradient
+              colors={[C.plum, C.plumLight]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={s.cta}
+            >
+              <View style={s.ctaLeft}>
+                <View style={s.ctaIconWrap}>
+                  <Ionicons name="game-controller-outline" size={18} color={C.plum} />
+                </View>
+                <View>
+                  <Text style={s.ctaTitle}>Behaviour Game</Text>
+                  <Text style={s.ctaSi}>ක්‍රියාකාරී ක්‍රීඩාව</Text>
                 </View>
               </View>
               <Ionicons name="arrow-forward-circle" size={30} color="rgba(255,255,255,0.8)" />
