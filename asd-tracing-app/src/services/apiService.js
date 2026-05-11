@@ -21,7 +21,7 @@ import { storage } from '../utils/storage';
  * DEV_MACHINE_IP = your laptop's WiFi IP from ipconfig
  * Run: ipconfig → look for "Wireless LAN adapter WiFi" → IPv4 Address
  */
-const DEV_MACHINE_IP = '10.106.125.210';
+const DEV_MACHINE_IP = '172.28.7.152';
 
 const BASE_URL =
   Platform.OS === 'web'
@@ -302,14 +302,14 @@ export async function getParentChildren(parentId) {
  */
 export async function getNextBehaviourScenario(childId, difficulty = 1, excludeIds = []) {
   try {
-    const params = new URLSearchParams({
+    const params = {
       childId,
       difficulty: difficulty.toString(),
-    });
+    };
     if (excludeIds.length > 0) {
-      params.append('excludeIds', excludeIds.join(','));
+      params.excludeIds = excludeIds.join(',');
     }
-    const res = await api.get(`/behaviour/scenarios/next?${params.toString()}`);
+    const res = await api.get('/behaviour/scenarios/next', { params });
     return res.data;
   } catch (error) {
     console.log('getNextBehaviourScenario failed:', error.message);
